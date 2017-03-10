@@ -1,5 +1,5 @@
 /*
- * arch/arm64/hotplug/autosmp.c
+ * drivers/soc/qcom/autosmp.c
  *
  * automatically hotplug/unplug multiple cpu cores
  * based on cpu load and suspend state
