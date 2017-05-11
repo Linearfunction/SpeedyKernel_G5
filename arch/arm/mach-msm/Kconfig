@@ -284,6 +284,5 @@ config ARCH_MSM8909
 	select DEVFREQ_GOV_MSM_BW_HWMON
 	select MSM_BIMC_BWMON
 	select ARCH_WANT_KMAP_ATOMIC_FLUSH
-
 endmenu
 endif
