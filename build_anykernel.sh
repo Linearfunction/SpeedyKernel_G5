@@ -15,8 +15,8 @@ export CROSS_COMPILE=~/android/toolchain/los-aarch64-linux-android-4.9/bin/aarch
 ##########################################
 make clean && make mrproper
 
-rmdir output830
-rmdir output850
+rm -r output830
+rm -r output850
 
 mkdir output830
 mkdir output850
