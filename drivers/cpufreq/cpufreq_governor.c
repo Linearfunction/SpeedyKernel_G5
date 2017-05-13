@@ -330,7 +330,6 @@ int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			cpufreq_register_notifier(cs_ops->notifier_block,
 					CPUFREQ_TRANSITION_NOTIFIER);
 		}
-
 		if (!have_governor_per_policy())
 			cdata->gdbs_data = dbs_data;
 
@@ -440,7 +439,7 @@ int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 
 		if (dbs_data->cdata->governor == GOV_ELEMENTALX)
 			ex_dbs_info->enable = 0;
-
+			
 		gov_cancel_work(dbs_data, policy);
 
 		mutex_lock(&dbs_data->mutex);
