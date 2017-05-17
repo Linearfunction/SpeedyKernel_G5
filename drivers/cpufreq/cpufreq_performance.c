@@ -17,7 +17,7 @@
 #include <linux/module.h>
 
 #if defined(CONFIG_LGE_PM) && !defined(CONFIG_MACH_MSM8996_LUCYE)
-bool minfreq_enabled = false;
+bool minfreq_enabled = true;
 EXPORT_SYMBOL(minfreq_enabled);
 #endif
 
