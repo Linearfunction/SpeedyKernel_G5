@@ -38,71 +38,22 @@
 #include <linux/of_batterydata.h>
 #include <linux/msm_bcl.h>
 #include <linux/ktime.h>
+#ifdef CONFIG_HTC_BATT
+#include <linux/power/htc_battery.h>
+#include <linux/htc_flags.h>
+#endif
 #include "pmic-voter.h"
 
-#ifdef CONFIG_LGE_PM_LGE_POWER_CORE
-#include <soc/qcom/lge/power/lge_power_class.h>
-#endif
-
-#ifdef CONFIG_LGE_PM_FACTORY_CABLE
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-#include <soc/qcom/smem.h>
-#include <soc/qcom/lge/power/lge_cable_detect.h>
-#endif
-#endif
-
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_BATTERY_ID_CHECKER
-#include <linux/power/lge_battery_id.h>
-#endif
-
-#ifdef CONFIG_LGE_PM_PSEUDO_BATTERY
-#include <soc/qcom/lge/lge_pseudo_batt.h>
-#endif
-
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-#include <soc/qcom/lge/lge_charging_scenario.h>
-#endif
-
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_BOARD_REVISION
-#include <soc/qcom/lge/power/lge_board_revision.h>
-#endif
-
-#ifdef CONFIG_LGE_PM_WAKE_LOCK_FOR_CHG_LOGO
-#include <soc/qcom/lge/board_lge.h>
-#endif
-
-#ifdef CONFIG_LGE_PM
-#include <linux/wakelock.h>
-#define CONFIG_LGE_PM_DIS_AICL_IRQ_WAKE
-#define CONFIG_LGE_PM_VFLOAT_TRIM_RESTORE
-#endif
-
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_ADC_QCT
-#include <soc/qcom/lge/lge_monitor_thermal.h>
-#endif
-
-#include <linux/proc_fs.h>
-
+/* Mask/Bit helpers */
 #ifdef CONFIG_FORCE_FAST_CHARGE
 #include <linux/fastchg.h>
 #endif
 
-#if defined(CONFIG_FB)
-#include <linux/notifier.h>
-#include <linux/fb.h>
-#endif /*CONFIG_FB*/
-
-#include <linux/timer.h>
-#include <linux/timex.h>
-#include <linux/rtc.h>
-
-/* Mask/Bit helpers */
 #define _SMB_MASK(BITS, POS) \
 	((unsigned char)(((1 << (BITS)) - 1) << (POS)))
 #define SMB_MASK(LEFT_BIT_POS, RIGHT_BIT_POS) \
 		_SMB_MASK((LEFT_BIT_POS) - (RIGHT_BIT_POS) + 1, \
 				(RIGHT_BIT_POS))
-
 /* Config registers */
 struct smbchg_regulator {
 	struct regulator_desc	rdesc;
@@ -115,11 +66,11 @@ struct parallel_usb_cfg {
 	int				min_9v_current_thr_ma;
 	int				allowed_lowering_ma;
 	int				current_max_ma;
-	bool			avail;
-	struct mutex	lock;
+	bool				avail;
+	struct mutex			lock;
 	int				initial_aicl_ma;
-	ktime_t			last_disabled;
-	bool			enabled_once;
+	ktime_t				last_disabled;
+	bool				enabled_once;
 };
 
 struct ilim_entry {
@@ -136,15 +87,15 @@ struct ilim_map {
 };
 
 struct smbchg_version_tables {
-	const int		*dc_ilim_ma_table;
+	const int			*dc_ilim_ma_table;
 	int				dc_ilim_ma_len;
-	const int		*usb_ilim_ma_table;
+	const int			*usb_ilim_ma_table;
 	int				usb_ilim_ma_len;
-	const int		*iterm_ma_table;
+	const int			*iterm_ma_table;
 	int				iterm_ma_len;
-	const int		*fcc_comp_table;
+	const int			*fcc_comp_table;
 	int				fcc_comp_len;
-	const int		*aicl_rerun_period_table;
+	const int			*aicl_rerun_period_table;
 	int				aicl_rerun_period_len;
 	int				rchg_thr_mv;
 };
@@ -152,39 +103,36 @@ struct smbchg_version_tables {
 struct smbchg_chip {
 	struct device			*dev;
 	struct spmi_device		*spmi;
-	int						schg_version;
+	int				schg_version;
 
 	/* peripheral register address bases */
-	u16					chgr_base;
-	u16					bat_if_base;
-	u16					usb_chgpth_base;
-	u16					dc_chgpth_base;
-	u16					otg_base;
-	u16					misc_base;
+	u16				chgr_base;
+	u16				bat_if_base;
+	u16				usb_chgpth_base;
+	u16				dc_chgpth_base;
+	u16				otg_base;
+	u16				misc_base;
 
-	int					fake_battery_soc;
-	u8					revision[4];
+	int				fake_battery_soc;
+	u8				revision[4];
 
 	/* configuration parameters */
-	int					iterm_ma;
-	int					usb_max_current_ma;
-	int					typec_current_ma;
-	int					dc_max_current_ma;
-	int					dc_target_current_ma;
-	int					cfg_fastchg_current_ma;
-	int					fastchg_current_ma;
-	int					vfloat_mv;
-	int					fastchg_current_comp;
-	int					float_voltage_comp;
-	int					resume_delta_mv;
-	int					safety_time;
-	int					prechg_safety_time;
-	int					bmd_pin_src;
-	int					jeita_temp_hard_limit;
-#ifdef CONFIG_LGE_PM_PSEUDO_BATTERY
-	u8              	vbat_low_thr;
-#endif
-	int					aicl_rerun_period_s;
+	int				iterm_ma;
+	int				usb_max_current_ma;
+	int				typec_current_ma;
+	int				dc_max_current_ma;
+	int				dc_target_current_ma;
+	int				cfg_fastchg_current_ma;
+	int				fastchg_current_ma;
+	int				vfloat_mv;
+	int				fastchg_current_comp;
+	int				float_voltage_comp;
+	int				resume_delta_mv;
+	int				safety_time;
+	int				prechg_safety_time;
+	int				bmd_pin_src;
+	int				jeita_temp_hard_limit;
+	int				aicl_rerun_period_s;
 	bool				use_vfloat_adjustments;
 	bool				iterm_disabled;
 	bool				bmd_algo_disabled;
@@ -205,53 +153,41 @@ struct smbchg_chip {
 	bool				hvdcp_not_supported;
 	bool				otg_pinctrl;
 	bool				cfg_override_usb_current;
-	u8					original_usbin_allowance;
+	u8				original_usbin_allowance;
 	struct parallel_usb_cfg		parallel;
-	struct delayed_work			parallel_en_work;
-	struct dentry				*debug_root;
+	struct delayed_work		parallel_en_work;
+	struct dentry			*debug_root;
 	struct smbchg_version_tables	tables;
-	struct qpnp_vadc_chip           *vadc_usbin_dev;
-#ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
-	int 				is_evp_ta;
-	struct delayed_work             enable_evp_chg_work;
-#endif
-#ifdef CONFIG_LGE_USB_TYPE_C
-	bool				dp_alt_mode;
-#endif
-#ifdef CONFIG_LGE_PM_WEAK_BATT_PACK
-	int                 batt_pack_verify_cnt;
-	struct delayed_work batt_pack_check_work;
-#endif
 
 	/* wipower params */
+	struct ilim_map			wipower_default;
+	struct ilim_map			wipower_pt;
+	struct ilim_map			wipower_div2;
+	struct qpnp_vadc_chip		*vadc_dev;
 	bool				wipower_dyn_icl_avail;
+	struct ilim_entry		current_ilim;
+	struct mutex			wipower_config;
 	bool				wipower_configured;
-	struct ilim_map						wipower_default;
-	struct ilim_map						wipower_pt;
-	struct ilim_map						wipower_div2;
-	struct qpnp_vadc_chip				*vadc_dev;
-	struct ilim_entry					current_ilim;
-	struct mutex						wipower_config;
-	struct qpnp_adc_tm_btm_param		param;
+	struct qpnp_adc_tm_btm_param	param;
 
 	/* flash current prediction */
-	int					rpara_uohm;
-	int					rslow_uohm;
-	int					vled_max_uv;
+	int				rpara_uohm;
+	int				rslow_uohm;
+	int				vled_max_uv;
 
 	/* vfloat adjustment */
-	int					max_vbat_sample;
-	int					n_vbat_samples;
+	int				max_vbat_sample;
+	int				n_vbat_samples;
 
 	/* status variables */
-	int					max_pulse_allowed;
-	int					wake_reasons;
-	int					previous_soc;
-	int					usb_online;
+	int				max_pulse_allowed;
+	int				wake_reasons;
+	int				previous_soc;
+	int				usb_online;
 	bool				dc_present;
 	bool				usb_present;
 	bool				batt_present;
-	int					otg_retries;
+	int				otg_retries;
 	ktime_t				otg_enable_time;
 	bool				aicl_deglitch_short;
 	bool				safety_timer_en;
@@ -275,165 +211,147 @@ struct smbchg_chip {
 	bool				batt_cold;
 	bool				batt_warm;
 	bool				batt_cool;
-	unsigned int		thermal_levels;
-	unsigned int		therm_lvl_sel;
-	unsigned int		*thermal_mitigation;
+	unsigned int			thermal_levels;
+	unsigned int			therm_lvl_sel;
+	unsigned int			*thermal_mitigation;
 
 	/* irqs */
-	int					batt_hot_irq;
-	int					batt_warm_irq;
-	int					batt_cool_irq;
-	int					batt_cold_irq;
-	int					batt_missing_irq;
-	int					vbat_low_irq;
-	int					chg_hot_irq;
-	int					chg_term_irq;
-	int					taper_irq;
+	int				batt_hot_irq;
+	int				batt_warm_irq;
+	int				batt_cool_irq;
+	int				batt_cold_irq;
+	int				batt_missing_irq;
+	int				vbat_low_irq;
+	int				chg_hot_irq;
+	int				chg_term_irq;
+	int				taper_irq;
 	bool				taper_irq_enabled;
-	struct mutex		taper_irq_lock;
-	int					recharge_irq;
-	int					fastchg_irq;
-	int					wdog_timeout_irq;
-	int					power_ok_irq;
-	int					dcin_uv_irq;
-	int					usbin_uv_irq;
-	int					usbin_ov_irq;
-	int					src_detect_irq;
-	int					otg_fail_irq;
-	int					otg_oc_irq;
-	int					aicl_done_irq;
-	int					usbid_change_irq;
-	int					chg_error_irq;
+	struct mutex			taper_irq_lock;
+	int				recharge_irq;
+	int				fastchg_irq;
+	int				wdog_timeout_irq;
+	int				power_ok_irq;
+	int				dcin_uv_irq;
+	int				usbin_uv_irq;
+	int				usbin_ov_irq;
+	int				src_detect_irq;
+	int				otg_fail_irq;
+	int				otg_oc_irq;
+	int				aicl_done_irq;
+	int				usbid_change_irq;
+	int				chg_error_irq;
 	bool				enable_aicl_wake;
 
 	/* psy */
-	struct power_supply					*usb_psy;
-	struct power_supply					batt_psy;
-	struct power_supply					dc_psy;
-	struct power_supply					*bms_psy;
-	struct power_supply					*typec_psy;
-#ifdef CONFIG_BATTERY_MAX17050
-	struct power_supply					*ext_fg_psy;
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-	struct lge_power 					*lge_cc_lpc;
-	struct delayed_work					lge_cc_enable_work;
-	enum lge_btm_states 				btm_state;
-	struct mutex			lge_cc_ibat_lock;
-	bool 				lge_cc_lpc_finish;
-	int 				vote_type;
-	int 				vote_state;
-#endif
-	int 				pseudo_ui_chg;
-	int 				otp_ibat_current;
-	int 				test_batt_therm;
-	int 				test_chg_scn;
-#ifdef CONFIG_LGE_PM_DEBUG
-	struct delayed_work					charging_info_work;
-#endif
-#ifdef CONFIG_LGE_PM_BATT_MANAGER
-    struct power_supply	*bm_psy;
-
-#endif
-	int					dc_psy_type;
+	struct power_supply		*usb_psy;
+	struct power_supply		batt_psy;
+	struct power_supply		dc_psy;
+	struct power_supply		*bms_psy;
+	struct power_supply		*typec_psy;
+	int				dc_psy_type;
 	const char			*bms_psy_name;
 	const char			*battery_psy_name;
 	bool				psy_registered;
 
-	struct smbchg_regulator				otg_vreg;
-	struct smbchg_regulator				ext_otg_vreg;
-	struct work_struct					usb_set_online_work;
-	struct delayed_work					vfloat_adjust_work;
-	struct delayed_work					hvdcp_det_work;
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	struct lge_power 					*lge_cd_lpc;
-	bool 				is_factory_cable;
-	int 				input_cd_current;
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-	int				cd_current_limit;
-#endif
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_ADC_QCT
-	struct lge_power 					*lge_adc_lpc;
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_VZW_REQ
-	struct lge_power 					*lge_vzw_lpc;
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_STORE_MODE
-	struct lge_power 					*lge_sm_lpc;
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_PSEUDO_BATTERY
-	struct lge_power *lge_pb_lpc;
-	int pseudo_batt;
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_BATTERY_ID_CHECKER
-	struct lge_power 					*lge_batt_id_lpc;
-	char 			*battery_name;
-#endif
+	struct smbchg_regulator		otg_vreg;
+	struct smbchg_regulator		ext_otg_vreg;
+	struct work_struct		usb_set_online_work;
+	struct delayed_work		vfloat_adjust_work;
+	struct delayed_work		hvdcp_det_work;
 	spinlock_t			sec_access_lock;
-	struct mutex		therm_lvl_lock;
-	struct mutex		usb_set_online_lock;
-	struct mutex		pm_lock;
+	struct mutex			therm_lvl_lock;
+	struct mutex			usb_set_online_lock;
+	struct mutex			pm_lock;
 	/* aicl deglitch workaround */
-	unsigned long		first_aicl_seconds;
-	int					aicl_irq_count;
-	struct mutex		usb_status_lock;
+	unsigned long			first_aicl_seconds;
+	int				aicl_irq_count;
+	struct mutex			usb_status_lock;
 	bool				hvdcp_3_det_ignore_uv;
-	int					pulse_cnt;
+	struct completion		src_det_lowered;
+	struct completion		src_det_raised;
+	struct completion		usbin_uv_lowered;
+	struct completion		usbin_uv_raised;
+	int				pulse_cnt;
+	struct led_classdev		led_cdev;
 	bool				skip_usb_notification;
-	u32					vchg_adc_channel;
-	struct completion					src_det_lowered;
-	struct completion					src_det_raised;
-	struct completion					usbin_uv_lowered;
-	struct completion					usbin_uv_raised;
-	struct led_classdev					led_cdev;
-	struct qpnp_vadc_chip				*vchg_vadc_dev;
+#ifdef CONFIG_HTC_BATT
+	struct work_struct              clean_tcc_WA;
+#endif
+#ifdef CONFIG_HTC_BATT_PCN0010
+	struct work_struct		usb_aicl_limit_current;
+#endif //CONFIG_HTC_BATT_PCN0010
+#ifdef CONFIG_HTC_BATT_WA_PCN0008
+	struct delayed_work		usb_limit_max_current;
+#endif //CONFIG_HTC_BATT_WA_PCN0008
+#ifdef CONFIG_HTC_BATT_WA_PCN0011
+	struct delayed_work		rerun_apsd_work;
+#endif //CONFIG_HTC_BATT_WA_PCN0011
+#ifdef CONFIG_HTC_BATT_PCN0015
+	struct delayed_work		iusb_5v_2a_detect_work;
+	struct delayed_work		downgrade_iusb_work;
+#endif //CONFIG_HTC_BATT_PCN0015
+#ifdef CONFIG_HTC_BATT_WA_PCN0017
+	struct delayed_work 	chk_cable_workable_work;
+#endif //CONFIG_HTC_BATT_WA_PCN0017
+#ifdef CONFIG_HTC_BATT_WA_PCN0013
+	struct delayed_work		force_hvdcp_work;
+	struct work_struct		hvdcp_redet_work;
+#endif //CONFIG_HTC_BATT_WA_PCN0013
+#if defined(CONFIG_HTC_BATT_WA_PCN0002)||defined(CONFIG_HTC_BATT_WA_PCN0014)
+	u32						htc_wa_flags;
+#endif //CONFIG_HTC_BATT_WA_PCN0002/CONFIG_HTC_BATT_WA_PCN0014
+
+#ifdef CONFIG_HTC_BATT_PCN0016
+	struct power_supply		*htcchg_psy;
+	bool				htcchg_ext_mode;
+	bool				htcchg_error_flag;
+#endif //CONFIG_HTC_BATT_PCN0016
+	u32				vchg_adc_channel;
+	struct qpnp_vadc_chip		*vchg_vadc_dev;
 
 	/* voters */
-	struct votable		*fcc_votable;
-	struct votable		*usb_icl_votable;
-	struct votable		*dc_icl_votable;
-	struct votable		*usb_suspend_votable;
-	struct votable		*dc_suspend_votable;
-	struct votable		*battchg_suspend_votable;
-	struct votable		*hw_aicl_rerun_disable_votable;
-	struct votable		*hw_aicl_rerun_enable_indirect_votable;
-	struct votable		*aicl_deglitch_short_votable;
-#ifdef CONFIG_LGE_PM_WAKE_LOCK_FOR_CHG_LOGO
-	struct wake_lock 	chg_logo_wake_lock;
-#endif
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-	struct delayed_work		parallel_usb_taper_work;
-	struct delayed_work		battchg_protect_work;
-#endif
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-	int				ctype_rp;
-	int				hvdcp_det_retry;
-	struct delayed_work		hvdcp_det_prepare_work;
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-#ifdef CONFIG_LGE_USB_TYPE_C
-	enum power_supply_type before_usb_supply_type;
-#endif
-#endif
-#endif
-#ifdef CONFIG_LGE_PM
-	int				maximum_icl_ma;
-#endif
-#ifdef CONFIG_LGE_PM_VFLOAT_TRIM_RESTORE
-	u8				initial_vfloat_trim_reg;
-	bool				vfloat_trim_restore_status;
-	struct delayed_work		vfloat_trim_check_work;
-#endif
-#ifdef CONFIG_LGE_PM
-	int				hvdcp_uv_count;
-	bool				hvdcp_uv_recovery;
-	struct delayed_work		hvdcp_recovery_work;
-#endif
+	struct votable			*fcc_votable;
+	struct votable			*usb_icl_votable;
+	struct votable			*dc_icl_votable;
+	struct votable			*usb_suspend_votable;
+	struct votable			*dc_suspend_votable;
+	struct votable			*battchg_suspend_votable;
+	struct votable			*hw_aicl_rerun_disable_votable;
+	struct votable			*hw_aicl_rerun_enable_indirect_votable;
+	struct votable			*aicl_deglitch_short_votable;
+	struct votable			*hvdcp_enable_votable;
 };
 
-#ifdef CONFIG_LGE_PM
-#define DCP_DEFAULT_FCC_MA        1500
+#ifdef CONFIG_HTC_BATT
+#define TEMP_MONITOR_DISABLE_BIT             0
+#define JEITA_TEMP_HARD_LIMIT_DISABLE_BIT    BIT(5)
+#define HOT_COLD_SL_COMP_BITS                0
+#define HARD_TEMP_MASK                       SMB_MASK(6, 5)
+#define SOFT_TEMP_MASK                       SMB_MASK(3, 0)
+static struct smbchg_chip *the_chip;
+static bool g_is_batt_full_eoc_stop = false;
+#ifdef CONFIG_HTC_BATT_WA_PCN0017
+static bool g_is_cable_workable_detect = false;
+#endif //CONFIG_HTC_BATT_WA_PCN0017
 #endif
+
+#if defined(CONFIG_HTC_BATT_PCN0010)||defined(CONFIG_HTC_BATT_WA_PCN0006)||defined(CONFIG_HTC_BATT_WA_PCN0008)
+/* USB current limit*/
+#define USB_MA_0       (0)
+#define USB_MA_2       (2)
+#define USB_MA_100     (100)
+#define USB_MA_150     (150)
+#define USB_MA_500     (500)
+#define USB_MA_900     (900)
+#define USB_MA_1000     (1000)
+#define USB_MA_1100    (1100)
+#define USB_MA_1200    (1200)
+#define USB_MA_1400 (1400)
+#define USB_MA_1450 (1450)
+#define USB_MA_1500	(1500)
+#define USB_MA_1600	(1600)
+#define USB_MA_2000	(2000)
+#endif //CONFIG_HTC_BATT_PCN0010/CONFIG_HTC_BATT_WA_PCN0006/CONFIG_HTC_BATT_WA_PCN0008
 
 enum qpnp_schg {
 	QPNP_SCHG,
@@ -441,7 +359,7 @@ enum qpnp_schg {
 };
 
 static char *version_str[] = {
-	[QPNP_SCHG]			= "SCHG",
+	[QPNP_SCHG]		= "SCHG",
 	[QPNP_SCHG_LITE]	= "SCHG_LITE",
 };
 
@@ -454,60 +372,54 @@ enum pmic_subtype {
 };
 
 enum smbchg_wa {
-	SMBCHG_AICL_DEGLITCH_WA 	= BIT(0),
-	SMBCHG_HVDCP_9V_EN_WA		= BIT(1),
-	SMBCHG_USB100_WA 			= BIT(2),
-	SMBCHG_BATT_OV_WA 			= BIT(3),
-	SMBCHG_CC_ESR_WA 			= BIT(4),
+	SMBCHG_AICL_DEGLITCH_WA = BIT(0),
+	SMBCHG_HVDCP_9V_EN_WA	= BIT(1),
+	SMBCHG_USB100_WA = BIT(2),
+	SMBCHG_BATT_OV_WA = BIT(3),
+	SMBCHG_CC_ESR_WA = BIT(4),
 	SMBCHG_FLASH_ICL_DISABLE_WA = BIT(5),
-	SMBCHG_RESTART_WA 			= BIT(6),
+	SMBCHG_RESTART_WA = BIT(6),
 	SMBCHG_FLASH_BUCK_SWITCH_FREQ_WA = BIT(7),
-	SMBCHG_ICL_CONTROL_WA 		= BIT(8),
+	SMBCHG_ICL_CONTROL_WA = BIT(8),
 };
 
-enum print_reason {
-	PR_REGISTER		= BIT(0),
-	PR_INTERRUPT	= BIT(1),
-	PR_STATUS		= BIT(2),
-	PR_DUMP			= BIT(3),
-	PR_PM			= BIT(4),
-	PR_MISC			= BIT(5),
-	PR_WIPOWER		= BIT(6),
-	PR_TYPEC		= BIT(7),
-#ifdef CONFIG_LGE_PM
-	PR_LGE			= BIT(8),
+#ifdef CONFIG_HTC_BATT
+enum htc_smbchg_wa {
+#ifdef CONFIG_HTC_BATT_WA_PCN0002
+	HTC_DISABLE_QC2_QC3_WA = BIT(0),
+#endif //CONFIG_HTC_BATT_WA_PCN0002
+#ifdef CONFIG_HTC_BATT_WA_PCN0014
+	HTC_FORCE_FSW_1MHZ_WA = BIT(1),
+#endif //CONFIG_HTC_BATT_WA_PCN0014
+};
 #endif
+
+enum print_reason {
+	PR_REGISTER	= BIT(0),
+	PR_INTERRUPT	= BIT(1),
+	PR_STATUS	= BIT(2),
+	PR_DUMP		= BIT(3),
+	PR_PM		= BIT(4),
+	PR_MISC		= BIT(5),
+	PR_WIPOWER	= BIT(6),
+	PR_TYPEC	= BIT(7),
 };
 
 enum wake_reason {
-	PM_PARALLEL_CHECK 		= BIT(0),
+	PM_PARALLEL_CHECK = BIT(0),
 	PM_REASON_VFLOAT_ADJUST = BIT(1),
-	PM_ESR_PULSE 			= BIT(2),
-	PM_PARALLEL_TAPER 		= BIT(3),
-	PM_DETECT_HVDCP 		= BIT(4),
-#ifdef CONFIG_LGE_PM_VFLOAT_TRIM_RESTORE
-	PM_VFLOAT_TRIM_RESTORE		= BIT(5),
-	PM_VFLOAT_TRIM_RECHARGE		= BIT(6),
-#endif
+	PM_ESR_PULSE = BIT(2),
+	PM_PARALLEL_TAPER = BIT(3),
+	PM_DETECT_HVDCP = BIT(4),
 };
 
 enum fcc_voters {
 	ESR_PULSE_FCC_VOTER,
 	BATT_TYPE_FCC_VOTER,
 	RESTRICTED_CHG_FCC_VOTER,
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-	BATTCHG_PROTECT_FCC_VOTER,
-	TAPER_FCC_VOTER,
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-	LGE_POWER_CLASS_FCC_VOTER,
-#endif
-#ifdef CONFIG_LGE_PM_FACTORY_CABLE
-	PIF_FCC_VOTER,
-#endif
-#ifdef CONFIG_LGE_PM_BATTERY_VENEER
-	BATTERY_VENEER_FCC_VOTER,
-#endif
+#ifdef CONFIG_HTC_BATT_PCN0016
+	HTCCHG_FCC_VOTER,
+#endif //CONFIG_HTC_BATT_PCN0016
 	NUM_FCC_VOTER,
 };
 
@@ -519,13 +431,14 @@ enum icl_voters {
 	WEAK_CHARGER_ICL_VOTER,
 	SW_AICL_ICL_VOTER,
 	CHG_SUSPEND_WORKAROUND_ICL_VOTER,
+#ifdef CONFIG_HTC_BATT_PCN0016
+	HTCCHG_ICL_VOTER,
+#endif //CONFIG_HTC_BATT_PCN0016
+#ifdef CONFIG_HTC_BATT
+//	SHUTDOWN_WORKAROUND_ICL_VOTER, //replace by CHG_SUSPEND_WORKAROUND_ICL_VOTER
+#else
 	SHUTDOWN_WORKAROUND_ICL_VOTER,
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-	LGE_CC_ICL_VOTER,
-#endif
-#ifdef CONFIG_LGE_PM
-	HW_ICL_VOTER,
-#endif
+#endif //CONFIG_HTC_BATT
 	NUM_ICL_VOTER,
 };
 
@@ -572,38 +485,7 @@ enum battchg_enable_voters {
 	/* userspace has disabled battery charging */
 	BATTCHG_USER_EN_VOTER,
 	/* battery charging disabled while loading battery profiles */
-#ifndef CONFIG_BATTERY_MAX17050
 	BATTCHG_UNKNOWN_BATTERY_EN_VOTER,
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-	/*
-	 * CC has disabled battery charging
-	 */
-	LGCC_EN_VOTER,
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	LGE_CD_EN_VOTER,
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_VZW_REQ
-	VZW_REQ_EN_VOTER,
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_STORE_MODE
-	STORE_MODE_EN_VOTER,
-#endif
-#ifdef CONFIG_LGE_PM_LLK_MODE
-	BATTCHG_LLK_MODE_EN_VOTER,
-#endif
-#ifdef CONFIG_LGE_PM_FACTORY_TESTMODE
-	/* ATCMD has disabled battery charging */
-	BATTCHG_ATCMD_EN_VOTER,
-#endif
-#ifdef CONFIG_LGE_PM_VFLOAT_TRIM_RESTORE
-	/* Restore VFLOAT_TRIM restart battery charging */
-	BATTCHG_VFLT_TRIM_EN_VOTER,
-#endif
-#ifdef CONFIG_LGE_PM_BATTERY_VENEER
-	BATTERY_VENEER_EN_VOTER,
-#endif
 	NUM_BATTCHG_EN_VOTERS,
 };
 
@@ -632,14 +514,13 @@ enum aicl_short_deglitch_voters {
 	HVDCP_SHORT_DEGLITCH_VOTER,
 	NUM_HW_SHORT_DEGLITCH_VOTERS,
 };
-
-#ifdef CONFIG_LGE_PM_DEBUG
-static int smbchg_debug_mask =
-			PR_INTERRUPT | PR_STATUS | PR_PM | PR_TYPEC | PR_LGE;
-#else
-static int smbchg_debug_mask;
-#endif
-
+enum hvdcp_voters {
+	HVDCP_PMIC_VOTER,
+	HVDCP_OTG_VOTER,
+	HVDCP_PULSING_VOTER,
+	NUM_HVDCP_VOTERS,
+};
+static int smbchg_debug_mask = 0;
 module_param_named(
 	debug_mask, smbchg_debug_mask, int, S_IRUSR | S_IWUSR
 );
@@ -661,19 +542,35 @@ module_param_named(
 	int, S_IRUSR | S_IWUSR
 );
 
+#ifdef CONFIG_HTC_BATT
+static int smbchg_default_hvdcp_icl_ma = 1600;
+#else
 static int smbchg_default_hvdcp_icl_ma = 1800;
+#endif //CONFIG_HTC_BATT
 module_param_named(
 	default_hvdcp_icl_ma, smbchg_default_hvdcp_icl_ma,
 	int, S_IRUSR | S_IWUSR
 );
 
+#ifdef CONFIG_HTC_BATT
+static int smbchg_default_hvdcp3_icl_ma = 2500;
+#else
 static int smbchg_default_hvdcp3_icl_ma = 3000;
+#endif // CONFIG_HTC_BATT
 module_param_named(
 	default_hvdcp3_icl_ma, smbchg_default_hvdcp3_icl_ma,
 	int, S_IRUSR | S_IWUSR
 );
 
+#ifdef CONFIG_HTC_BATT
+#ifdef CONFIG_HTC_BATT_WA_PCN0021
+static int smbchg_default_dcp_icl_ma = 1000;
+#else
+static int smbchg_default_dcp_icl_ma = 1500;
+#endif //CONFIG_HTC_BATT_WA_PCN0021
+#else
 static int smbchg_default_dcp_icl_ma = 1800;
+#endif // CONFIG_HTC_BATT
 module_param_named(
 	default_dcp_icl_ma, smbchg_default_dcp_icl_ma,
 	int, S_IRUSR | S_IWUSR
@@ -714,121 +611,193 @@ module_param_named(
 			pr_debug_ratelimited(fmt, ##__VA_ARGS__);	\
 	} while (0)
 
-#ifdef CONFIG_LGE_PM
-struct smbchg_chip *smb_chip;
+#ifdef CONFIG_HTC_BATT
+#ifdef CONFIG_HTC_BATT_PCN0010
+static inline int ABS(int x) { return x >= 0 ? x : -x; }
+#endif //CONFIG_HTC_BATT_PCN0010
+static void dump_regs(struct smbchg_chip *chip);
+int pmi8994_get_usbin_voltage_now(void);
+#ifdef CONFIG_HTC_BATT_WA_PCN0013
+static void restore_from_hvdcp_detection(struct smbchg_chip *chip);
 #endif
 
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-static int is_56k_910k;
-static bool is_boot_factory_cable;
-static unsigned int factory_mode;
-#endif
+#ifdef CONFIG_HTC_BATT_PCN0015
+/* Constant value declaration */
+#define AICL_5V_2A_DETECT_DELAY_MS	1000
+#define AICL_DOWNGRADE_IUSB_DELAY_MS	1000
+#endif //CONFIG_HTC_BATT_PCN0015
 
-#define DEFAULT_VBUS_UV              5000
-#define CHARGING_INFORM_NORMAL_TIME  30000
-#ifdef CONFIG_LGE_PM_FACTORY_CABLE
-#define FACTORY_ICL_MA               1500
-#define FACTORY_FCC_MA 				  500
-#endif
+/* static global variables declaration */
+#ifdef CONFIG_HTC_BATT_PCN0010
+static bool g_is_limit_IUSB = false;
+static int g_count_same_dischg = 0;
+#endif //CONFIG_HTC_BATT_PCN0010
+#ifdef CONFIG_HTC_BATT_PCN0015
+static bool g_is_hvdcp_detect_done = false;
+static bool g_is_charger_ability_detected = false;
+static bool g_is_5v_2a_detected = false;
+#endif //CONFIG_HTC_BATT_PCN0015
+#ifdef CONFIG_HTC_BATT_WA_PCN0011
+static bool g_rerun_apsd_ignore_uv = false;
+#endif //CONFIG_HTC_BATT_WA_PCN0011
+#endif //CONFIG_HTC_BATT
+static int g_typec_workable = 0;
 
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-#ifdef CONFIG_LGE_PM_DEBUG
-static bool is_usb_present(struct smbchg_chip *chip);
+#ifdef CONFIG_HTC_BATT_PCN0022
+static const struct qpnp_vadc_map_pt usb_adcmap_btm_threshold[] = {
+        {-200, 1668},
+        {-190, 1659},
+        {-180, 1651},
+        {-170, 1641},
+        {-160, 1632},
+        {-150, 1622},
+        {-140, 1611},
+        {-130, 1600},
+        {-120, 1589},
+        {-110, 1577},
+        {-100, 1565},
+        {-90, 1552},
+        {-80, 1539},
+        {-70, 1525},
+        {-60, 1511},
+        {-50, 1496},
+        {-40, 1481},
+        {-30, 1466},
+        {-20, 1449},
+        {-10, 1433},
+        {0, 1416},
+        {10, 1398},
+        {20, 1381},
+        {30, 1362},
+        {40, 1344},
+        {50, 1325},
+        {60, 1305},
+        {70, 1286},
+        {80, 1266},
+        {90, 1245},
+        {100, 1225},
+        {110, 1204},
+        {120, 1183},
+        {130, 1161},
+        {140, 1140},
+        {150, 1118},
+        {160, 1096},
+        {170, 1075},
+        {180, 1053},
+        {190, 1031},
+        {200, 1009},
+        {210, 987},
+        {220, 965},
+        {230, 943},
+        {240, 922},
+        {250, 900},
+        {260, 879},
+        {270, 857},
+        {280, 836},
+        {290, 815},
+        {300, 795},
+        {310, 774},
+        {320, 754},
+        {330, 734},
+        {340, 715},
+        {350, 695},
+        {360, 677},
+        {370, 658},
+        {380, 640},
+        {390, 622},
+        {400, 604},
+        {410, 587},
+        {420, 570},
+        {430, 554},
+        {440, 537},
+        {450, 522},
+        {460, 506},
+        {470, 491},
+        {480, 477},
+        {490, 462},
+        {500, 449},
+        {510, 435},
+        {520, 422},
+        {530, 409},
+        {540, 397},
+        {550, 385},
+        {560, 373},
+        {570, 361},
+        {580, 350},
+        {590, 339},
+        {600, 329},
+        {610, 319},
+        {620, 309},
+        {630, 300},
+        {640, 290},
+        {650, 281},
+        {660, 273},
+        {670, 264},
+        {680, 256},
+        {690, 248},
+        {700, 241},
+        {710, 233},
+        {720, 226},
+        {730, 219},
+        {740, 212},
+        {750, 206},
+        {760, 200},
+        {770, 193},
+        {780, 188},
+        {790, 182},
+        {800, 176},
+        {810, 171},
+        {820, 166},
+        {830, 161},
+        {840, 156},
+        {850, 151},
+        {860, 147},
+        {870, 142},
+        {880, 138},
+        {890, 134},
+        {900, 130},
+        {910, 126},
+        {920, 123},
+        {930, 119},
+        {940, 116},
+        {950, 112},
+        {960, 109},
+        {970, 106},
+        {980, 103},
+        {990, 100},
+        {1000, 97},
+        {1010, 94},
+        {1020, 91},
+        {1030, 89},
+        {1040, 86},
+        {1050, 84},
+        {1060, 82},
+        {1070, 79},
+        {1080, 77},
+        {1090, 75},
+        {1100, 73},
+        {1110, 71},
+        {1120, 69},
+        {1130, 67},
+        {1140, 65},
+        {1150, 64},
+        {1160, 62},
+        {1170, 60},
+        {1180, 59},
+        {1190, 57},
+        {1200, 56},
+        {1210, 54},
+        {1220, 53},
+        {1230, 51},
+        {1240, 50},
+        {1250, 49}
+};
+#endif //CONFIG_HTC_BATT_PCN0022
 
-static int get_usb_adc(struct smbchg_chip *chip)
-{
-	struct qpnp_vadc_result results;
-	int rc, usbin_vol;
-
-	if (!is_usb_present(chip))
-		return 0;
-
-	if (IS_ERR_OR_NULL(chip->vadc_usbin_dev)) {
-		chip->vadc_usbin_dev =
-			qpnp_get_vadc(chip->dev, "usbin");
-		if (IS_ERR_OR_NULL(chip->vadc_usbin_dev)) {
-			pr_smb(PR_LGE, "vadc is not init yet\n");
-			return DEFAULT_VBUS_UV;
-		}
-	}
-
-	rc = qpnp_vadc_read(chip->vadc_usbin_dev, USBIN, &results);
-	if (rc < 0) {
-		dev_err(chip->dev,
-			"failed to read usb in voltage. rc = %d\n", rc);
-		return DEFAULT_VBUS_UV;
-	}
-
-	usbin_vol = results.physical / 1000;
-	pr_debug("usb in voltage = %dmV\n", usbin_vol);
-
-	return usbin_vol;
-}
-#endif
-
-static int get_prop_batt_health(struct smbchg_chip *chip);
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SUPPORT_CCD
-// do nothing
-#else
-static int lgcc_set_ibat_current(struct smbchg_chip *chip,
-		int chg_current) {
-	int rc = 0;
-
-	pr_smb(PR_LGE, "chg_current[%d]\n", chg_current);
-
-	mutex_lock(&chip->lge_cc_ibat_lock);
-	if (!chip->usb_present) {
-		rc = vote(chip->fcc_votable, LGE_POWER_CLASS_FCC_VOTER,
-				false, chg_current);
-	} else {
-		rc = vote(chip->fcc_votable, LGE_POWER_CLASS_FCC_VOTER,
-				true, chg_current);
-	}
-	if (rc < 0) {
-		pr_err("Couldn't vote fcc setting\n");
-		mutex_unlock(&chip->lge_cc_ibat_lock);
-		return rc;
-	}
-	mutex_unlock(&chip->lge_cc_ibat_lock);
-
-	return rc;
-}
-
-static int lgcc_set_charging_enable(struct smbchg_chip *chip,
-		int enable) {
-	int rc = 0;
-
-	vote(chip->battchg_suspend_votable, LGCC_EN_VOTER, !enable, 0);
-	if (rc < 0)
-		pr_smb(PR_LGE, "failed to set Charging Status \n");
-
-	return rc;
-}
-#endif
-
-int lgcc_get_effective_fcc_result(void) {
-	int rc;
-
-	rc = get_effective_result_locked(smb_chip->fcc_votable);
-	if (rc < 0)
-		pr_err("Failed to get fcc votable\n");
-
-	return rc;
-}
-EXPORT_SYMBOL(lgcc_get_effective_fcc_result);
-#endif
-
-#ifdef CONFIG_LGE_PM_FACTORY_CABLE
-static bool is_factory_cable(struct smbchg_chip *chip) {
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	if (chip)
-		return chip->is_factory_cable;
-	else
-		return is_boot_factory_cable;
-#endif
-	return false;
-}
-#endif
+#ifdef CONFIG_HTC_BATT_PCN0016
+static int pmi8994_set_htc_chg_charging_enabled(int value);
+static int pmi8994_set_htc_chg_flash_active(int value);
+#endif //CONFIG_HTC_BATT_PCN0016
 
 static int smbchg_read(struct smbchg_chip *chip, u8 *val,
 			u16 addr, int count)
@@ -1039,21 +1008,12 @@ static enum pwr_path_type smbchg_get_pwr_path(struct smbchg_chip *chip)
 #define USBIN_SRC_DET_BIT		BIT(2)
 #define FMB_STS_MASK			SMB_MASK(3, 0)
 #define USBID_GND_THRESHOLD		0x495
-#ifdef CONFIG_LGE_USB_TYPE_C
-static void get_property_from_typec(struct smbchg_chip *chip,
-				enum power_supply_property property,
-				union power_supply_propval *prop);
-#endif
-
 static bool is_otg_present_schg(struct smbchg_chip *chip)
 {
 	int rc;
 	u8 reg;
 	u8 usbid_reg[2];
 	u16 usbid_val;
-#ifdef CONFIG_LGE_USB_TYPE_C
-	union power_supply_propval prop;
-#endif
 	/*
 	 * After the falling edge of the usbid change interrupt occurs,
 	 * there may still be some time before the ADC conversion for USB RID
@@ -1066,11 +1026,6 @@ static bool is_otg_present_schg(struct smbchg_chip *chip)
 	 */
 
 	msleep(20);
-
-#ifdef CONFIG_LGE_USB_TYPE_C
-	get_property_from_typec(chip, POWER_SUPPLY_PROP_USB_OTG, &prop);
-	return prop.intval ? true : false;
-#endif
 
 	/*
 	 * There is a problem with USBID conversions on PMI8994 revisions
@@ -1214,7 +1169,11 @@ static enum power_supply_type usb_type_enum[] = {
 	POWER_SUPPLY_TYPE_USB_DCP,	/* bit 1 */
 	POWER_SUPPLY_TYPE_USB_DCP,	/* bit 2 */
 	POWER_SUPPLY_TYPE_USB_CDP,	/* bit 3 */
+#ifdef CONFIG_HTC_BATT_WA_PCN0007
+	POWER_SUPPLY_TYPE_UNKNOWN,	/* bit 4 */
+#else
 	POWER_SUPPLY_TYPE_USB_DCP,	/* bit 4 error case, report DCP */
+#endif //CONFIG_HTC_BATT_WA_PCN0007
 };
 
 /* helper to return enum power_supply_type of USB type */
@@ -1254,7 +1213,9 @@ static void read_usb_type(struct smbchg_chip *chip, char **usb_type_name,
 		dev_err(chip->dev, "Couldn't read status 5 rc = %d\n", rc);
 		*usb_type_name = "Other";
 		*usb_supply_type = POWER_SUPPLY_TYPE_UNKNOWN;
+#ifdef CONFIG_HTC_BATT_WA_PCN0007
 		return;
+#endif //CONFIG_HTC_BATT_WA_PCN0007
 	}
 	type = get_type(reg);
 	*usb_type_name = get_usb_type_name(type);
@@ -1272,41 +1233,22 @@ static void read_usb_type(struct smbchg_chip *chip, char **usb_type_name,
 #define BATT_TAPER_CHG_VAL		0x3
 #define CHG_INHIBIT_BIT			BIT(1)
 #define BAT_TCC_REACHED_BIT		BIT(7)
-
-#ifdef CONFIG_LGE_PM
-static int get_prop_batt_voltage_now(struct smbchg_chip *chip);
-static int get_prop_batt_capacity(struct smbchg_chip *chip);
-static int get_prop_batt_status(struct smbchg_chip *chip);
-
-static int get_prop_batt_status_for_ui(struct smbchg_chip *chip)
-{
-	bool charger_present;
-
-	charger_present = is_usb_present(chip) | is_dc_present(chip) |
-			  chip->hvdcp_3_det_ignore_uv;
-
-	if (charger_present) {
-	/* report full if state of charge is 100, even if phone is charging */
-		if (get_prop_batt_capacity(chip) == 100)
-			return POWER_SUPPLY_STATUS_FULL;
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-		if (chip->pseudo_ui_chg)
-			return POWER_SUPPLY_STATUS_CHARGING;
-#endif
-	}
-
-	return get_prop_batt_status(chip);
-}
-#endif
-
 static int get_prop_batt_status(struct smbchg_chip *chip)
 {
 	int rc, status = POWER_SUPPLY_STATUS_DISCHARGING;
 	u8 reg = 0, chg_type;
 	bool charger_present, chg_inhibit;
+#ifdef CONFIG_HTC_BATT_PCN0001
+	int level = htc_battery_level_adjust();
+#endif //CONFIG_HTC_BATT_PCN0001
 
+#ifdef CONFIG_HTC_BATT_WA_PCN0011
+	charger_present = is_usb_present(chip) | is_dc_present(chip) |
+			  chip->hvdcp_3_det_ignore_uv | g_rerun_apsd_ignore_uv;
+#else
 	charger_present = is_usb_present(chip) | is_dc_present(chip) |
 			  chip->hvdcp_3_det_ignore_uv;
+#endif //CONFIG_HTC_BATT_WA_PCN0011
 	if (!charger_present)
 		return POWER_SUPPLY_STATUS_DISCHARGING;
 
@@ -1316,12 +1258,21 @@ static int get_prop_batt_status(struct smbchg_chip *chip)
 		return POWER_SUPPLY_STATUS_UNKNOWN;
 	}
 
+#ifdef CONFIG_HTC_BATT_PCN0001
+	if ((reg & BAT_TCC_REACHED_BIT) && (level == 100))
+		return POWER_SUPPLY_STATUS_FULL;
+
+	chg_inhibit = reg & CHG_INHIBIT_BIT;
+	if ((chg_inhibit) && (level == 100))
+		return POWER_SUPPLY_STATUS_FULL;
+#else
 	if (reg & BAT_TCC_REACHED_BIT)
 		return POWER_SUPPLY_STATUS_FULL;
 
 	chg_inhibit = reg & CHG_INHIBIT_BIT;
 	if (chg_inhibit)
 		return POWER_SUPPLY_STATUS_FULL;
+#endif //CONFIG_HTC_BATT_PCN0001
 
 	rc = smbchg_read(chip, &reg, chip->chgr_base + CHGR_STS, 1);
 	if (rc < 0) {
@@ -1334,16 +1285,52 @@ static int get_prop_batt_status(struct smbchg_chip *chip)
 		 * when chg hold off happens the battery is
 		 * not charging
 		 */
+#ifdef CONFIG_HTC_BATT_PCN0001
+		if (level == 100)
+			status = POWER_SUPPLY_STATUS_FULL;
+		else
+			status = POWER_SUPPLY_STATUS_CHARGING;
+#else
 		status = POWER_SUPPLY_STATUS_NOT_CHARGING;
+#endif //CONFIG_HTC_BATT_PCN0001
 		goto out;
 	}
 
 	chg_type = (reg & CHG_TYPE_MASK) >> CHG_TYPE_SHIFT;
 
+#ifdef CONFIG_HTC_BATT_WA_PCN0011
+	if (chg_type == BATT_NOT_CHG_VAL && !(chip->hvdcp_3_det_ignore_uv || g_rerun_apsd_ignore_uv))
+		if (chip->usb_supply_type > POWER_SUPPLY_TYPE_UNKNOWN) {
+#ifdef CONFIG_HTC_BATT_PCN0001
+			if (level == 100)
+				status = POWER_SUPPLY_STATUS_FULL;
+			else{
+				if(htc_battery_get_discharging_reason())
+					status = POWER_SUPPLY_STATUS_DISCHARGING;
+				else
+					status = POWER_SUPPLY_STATUS_CHARGING;
+			}
+#endif //CONFIG_HTC_BATT_PCN0001
+		} else
+			status = POWER_SUPPLY_STATUS_DISCHARGING;
+	else {
+#ifdef CONFIG_HTC_BATT_PCN0001
+		if (level == 100)
+			status = POWER_SUPPLY_STATUS_FULL;
+		else{
+			if(htc_battery_get_discharging_reason())
+				status = POWER_SUPPLY_STATUS_DISCHARGING;
+                        else
+				status = POWER_SUPPLY_STATUS_CHARGING;
+		}
+#endif //CONFIG_HTC_BATT_PCN0001
+	}
+#else
 	if (chg_type == BATT_NOT_CHG_VAL && !chip->hvdcp_3_det_ignore_uv)
 		status = POWER_SUPPLY_STATUS_DISCHARGING;
 	else
 		status = POWER_SUPPLY_STATUS_CHARGING;
+#endif //CONFIG_HTC_BATT_WA_PCN0011
 out:
 	pr_smb_rt(PR_MISC, "CHGR_STS = 0x%02x\n", reg);
 	return status;
@@ -1365,33 +1352,6 @@ static int get_prop_batt_present(struct smbchg_chip *chip)
 	return !!(reg & BAT_PRES_BIT);
 }
 
-#ifdef CONFIG_LGE_PM_BATT_MANAGER
-static int set_property_on_bm(struct smbchg_chip *chip,
-	enum power_supply_property prop, int val)
-{
-	int rc;
-	union power_supply_propval ret = {0, };
-	if(!chip->bm_psy){
-		chip->bm_psy = power_supply_get_by_name("battery_manager");
-	}
-
-	if (!chip->bm_psy) {
-		pr_smb(PR_STATUS, "no bm psy found\n");
-		return -EINVAL;
-	}
-
-	ret.intval = val;
-	rc = chip->bm_psy->set_property(chip->bm_psy, prop, &ret);
-	if (rc)
-		pr_smb(PR_STATUS,
-			"bm psy does not allow updating prop %d rc = %d\n",
-			prop, rc);
-
-	return rc;
-}
-#endif
-
-
 static int get_prop_charge_type(struct smbchg_chip *chip)
 {
 	int rc;
@@ -1404,7 +1364,6 @@ static int get_prop_charge_type(struct smbchg_chip *chip)
 	}
 
 	chg_type = (reg & CHG_TYPE_MASK) >> CHG_TYPE_SHIFT;
-
 	if (chg_type == BATT_NOT_CHG_VAL)
 		return POWER_SUPPLY_CHARGE_TYPE_NONE;
 	else if (chg_type == BATT_TAPER_CHG_VAL)
@@ -1440,9 +1399,6 @@ static int set_property_on_fg(struct smbchg_chip *chip,
 
 	return rc;
 }
-#ifdef CONFIG_BATTERY_MAX17050
-extern int get_property_from_max17050(enum power_supply_property prop);
-#endif
 
 static int get_property_from_fg(struct smbchg_chip *chip,
 		enum power_supply_property prop, int *val)
@@ -1450,12 +1406,6 @@ static int get_property_from_fg(struct smbchg_chip *chip,
 	int rc;
 	union power_supply_propval ret = {0, };
 
-#ifdef CONFIG_BATTERY_MAX17050
-	if ( prop == POWER_SUPPLY_PROP_CAPACITY ) {
-		*val = get_property_from_max17050(prop);
-		return 0;
-	}
-#endif
 	if (!chip->bms_psy && chip->bms_psy_name)
 		chip->bms_psy =
 			power_supply_get_by_name((char *)chip->bms_psy_name);
@@ -1489,14 +1439,12 @@ static int get_prop_batt_capacity(struct smbchg_chip *chip)
 		pr_smb(PR_STATUS, "Couldn't get capacity rc = %d\n", rc);
 		capacity = DEFAULT_BATT_CAPACITY;
 	}
-#ifdef CONFIG_LGE_PM_SOC_SCALING
-	if (capacity >= 100) {
-		capacity = 100;
-	} else if ((!chip->usb_present) && (capacity == 1) &&
-			(get_prop_batt_voltage_now(chip) < 3300)) {
-		capacity = 0;
-	}
-#endif
+
+#ifdef CONFIG_HTC_BATT_PCN0001
+	htc_battery_info_update(POWER_SUPPLY_PROP_CAPACITY, capacity);
+	capacity = htc_battery_level_adjust();
+#endif //CONFIG_HTC_BATT_PCN0001
+
 	return capacity;
 }
 
@@ -1505,19 +1453,19 @@ static int get_prop_batt_temp(struct smbchg_chip *chip)
 {
 	int temp, rc;
 
-#ifdef CONFIG_LGE_PM_PSEUDO_BATTERY
-	if (get_pseudo_batt_info(PSEUDO_BATT_MODE))
-		return get_pseudo_batt_info(PSEUDO_BATT_TEMP) * 10;
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-	if (chip->test_chg_scn == 1)
-		return chip->test_batt_therm * 10;
-#endif
 	rc = get_property_from_fg(chip, POWER_SUPPLY_PROP_TEMP, &temp);
 	if (rc) {
 		pr_smb(PR_STATUS, "Couldn't get temperature rc = %d\n", rc);
 		temp = DEFAULT_BATT_TEMP;
 	}
+
+#ifdef CONFIG_HTC_BATT_PCN0006
+	if (get_kernel_flag() & KERNEL_FLAG_TEST_PWR_SUPPLY)
+		temp = POWER_MONITOR_BATT_TEMP;
+	if (temp > 650 && (get_kernel_flag() & KERNEL_FLAG_KEEP_CHARG_ON))
+		temp = 650;
+#endif //CONFIG_HTC_BATT_PCN0006
+
 	return temp;
 }
 
@@ -1534,7 +1482,6 @@ static int get_prop_batt_current_now(struct smbchg_chip *chip)
 	return ua;
 }
 
-#ifdef CONFIG_LGE_PM_RESTORE_BATT_INFO
 #define DEFAULT_BATT_RESISTANCE_ID	0
 static int get_prop_batt_resistance_id(struct smbchg_chip *chip)
 {
@@ -1561,7 +1508,6 @@ static int get_prop_batt_full_charge(struct smbchg_chip *chip)
 	}
 	return bfc;
 }
-#endif
 
 #define DEFAULT_BATT_VOLTAGE_NOW	0
 static int get_prop_batt_voltage_now(struct smbchg_chip *chip)
@@ -1590,16 +1536,37 @@ static int get_prop_batt_voltage_max_design(struct smbchg_chip *chip)
 	return uv;
 }
 
+#ifdef CONFIG_HTC_BATT_PCN0009
+static int get_prop_batt_soc(struct smbchg_chip *chip)
+{
+	int batt_soc, rc;
+
+	rc = get_property_from_fg(chip, POWER_SUPPLY_PROP_CAPACITY_RAW, &batt_soc);
+	if (rc) {
+		pr_smb(PR_STATUS, "Couldn't get batt_soc rc = %d\n", rc);
+	}
+//	pr_smb(PR_STATUS, "Battery SoC = %d\n", batt_soc);
+
+	return batt_soc;
+}
+
+static int get_prop_system_soc(struct smbchg_chip *chip)
+{
+	int system_soc, rc;
+
+	rc = get_property_from_fg(chip, POWER_SUPPLY_PROP_SYSTEM_SOC, &system_soc);
+	if (rc) {
+		pr_smb(PR_STATUS, "Couldn't get system_soc rc = %d\n", rc);
+	}
+//	pr_smb(PR_STATUS, "System SoC = %d\n", system_soc);
+
+	return system_soc;
+}
+
+#endif //CONFIG_HTC_BATT_PCN0009
+
 static int get_prop_batt_health(struct smbchg_chip *chip)
 {
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-	if (chip->btm_state == BTM_HEALTH_OVERHEAT)
-		return POWER_SUPPLY_HEALTH_OVERHEAT;
-	else if (chip->btm_state == BTM_HEALTH_COLD)
-		return POWER_SUPPLY_HEALTH_COLD;
-	else
-		return POWER_SUPPLY_HEALTH_GOOD;
-#else
 	if (chip->batt_hot)
 		return POWER_SUPPLY_HEALTH_OVERHEAT;
 	else if (chip->batt_cold)
@@ -1610,40 +1577,13 @@ static int get_prop_batt_health(struct smbchg_chip *chip)
 		return POWER_SUPPLY_HEALTH_COOL;
 	else
 		return POWER_SUPPLY_HEALTH_GOOD;
-#endif
 }
-
-#ifdef CONFIG_LGE_PM_FG_AGE
-#define DEFAULT_BATT_AGE 1
-static int get_prop_battery_condition(struct smbchg_chip *chip)
-{
-	int age, rc;
-
-	rc = get_property_from_fg(chip, POWER_SUPPLY_PROP_BATTERY_CONDITION, &age);
-	if (rc) {
-		pr_smb(PR_STATUS, "Couldn't get age rc = %d\n", rc);
-		age = DEFAULT_BATT_AGE;
-	}
-	return age;
-}
-#endif
 
 static void get_property_from_typec(struct smbchg_chip *chip,
 				enum power_supply_property property,
 				union power_supply_propval *prop)
 {
 	int rc;
-
-#ifdef CONFIG_LGE_USB_TYPE_C
-	if (!chip->typec_psy) {
-		chip->typec_psy = power_supply_get_by_name("usb_pd");
-		if (!chip->typec_psy) {
-			pr_smb(PR_LGE, "typec psy doesn't prepared\n");
-			prop->intval = 0;
-			return;
-		}
-	}
-#endif
 
 	rc = chip->typec_psy->get_property(chip->typec_psy, property, prop);
 	if (rc)
@@ -1945,6 +1885,11 @@ static int smbchg_usb_suspend(struct smbchg_chip *chip, bool suspend)
 {
 	int rc;
 
+#ifdef CONFIG_HTC_BATT_PCN0010
+	if (!suspend)
+		g_count_same_dischg = 0;
+#endif //CONFIG_HTC_BATT_PCN0010
+
 	rc = smbchg_masked_write(chip, chip->usb_chgpth_base + CMD_IL,
 			USBIN_SUSPEND_BIT, suspend ? USBIN_SUSPEND_BIT : 0);
 	if (rc < 0)
@@ -2038,15 +1983,17 @@ static void smbchg_usb_update_online_work(struct work_struct *work)
 	struct smbchg_chip *chip = container_of(work,
 				struct smbchg_chip,
 				usb_set_online_work);
+#ifndef CONFIG_HTC_BATT_PCN0001
 	bool user_enabled = !get_client_vote(chip->usb_suspend_votable,
 						USER_EN_VOTER);
+#endif //CONFIG_HTC_BATT_PCN0001
 	int online;
 
-#ifdef CONFIG_LGE_PM
-	online = user_enabled && chip->usb_present;
+#ifdef CONFIG_HTC_BATT_PCN0001
+	online = chip->usb_present;
 #else
 	online = user_enabled && chip->usb_present && !chip->very_weak_charger;
-#endif
+#endif //CONFIG_HTC_BATT_PCN0001
 
 	mutex_lock(&chip->usb_set_online_lock);
 	if (chip->usb_online != online) {
@@ -2141,11 +2088,21 @@ static int smbchg_set_high_usb_chg_current(struct smbchg_chip *chip,
  *	if CDP/DCP it will look at 0x0C setting
  *		i.e. values in 0x41[1, 0] does not matter
  */
- 
+#ifdef CONFIG_FORCE_FAST_CHARGE
+static int fcharge_enabled(void) {
+	if (force_fast_charge == 1) {
+		return 1;
+	} else return 0;
+}
+#endif
+
 static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 							int current_ma)
 {
 	int rc = 0;
+#ifdef CONFIG_HTC_BATT_PCN0020
+	int pd_current;
+#endif //CONFIG_HTC_BATT_PCN0020
 
 	/*
 	 * if the battery is not present, do not allow the usb ICL to lower in
@@ -2156,6 +2113,19 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 				current_ma);
 		return 0;
 	}
+
+#ifdef CONFIG_HTC_BATT_PCN0010
+	if(g_is_limit_IUSB && (current_ma >= USB_MA_1000) &&
+		(chip->usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP)
+#ifdef CONFIG_HTC_BATT_PCN0020
+		&& !htc_battery_get_pd_type(&pd_current)
+#endif //CONFIG_HTC_BATT_PCN0020
+		){
+		pr_smb(PR_STATUS, "Charger is bad, force limit current %d -> 1000 mA\n",current_ma);
+		current_ma = USB_MA_1000;
+	}
+#endif //CONFIG_HTC_BATT_PCN0010
+
 	pr_smb(PR_STATUS, "USB current_ma = %d\n", current_ma);
 
 	if (current_ma <= SUSPEND_CURRENT_MA) {
@@ -2167,8 +2137,37 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 		rc = vote(chip->usb_suspend_votable, USB_EN_VOTER, false, 0);
 	}
 
+// fastcharge
+#ifdef CONFIG_FORCE_FAST_CHARGE
+	if (fcharge_enabled()) {
+		pr_err("%s FCHARGE supplytype %d\n", __func__ , chip->usb_supply_type);
+		if (chip->usb_supply_type == POWER_SUPPLY_TYPE_UNKNOWN) {
+			chip->usb_supply_type = POWER_SUPPLY_TYPE_USB;
+		}
+		pr_err("%s FCHARGE final supplytype %d current_ma %d\n", __func__ , chip->usb_supply_type, current_ma);
+	}
+#endif
+// end of fastcharge
+
 	switch (chip->usb_supply_type) {
 	case POWER_SUPPLY_TYPE_USB:
+#ifdef CONFIG_HTC_BATT_PCN0020
+		if(htc_battery_get_pd_type(&pd_current)){
+			if (current_ma <= CURRENT_1500_MA) {
+				/* use override for CDP */
+				rc = smbchg_masked_write(chip,
+						chip->usb_chgpth_base + CMD_IL,
+						ICL_OVERRIDE_BIT, ICL_OVERRIDE_BIT);
+				if (rc < 0)
+					pr_err("Couldn't set override rc = %d\n", rc);
+			}
+
+			rc = smbchg_set_high_usb_chg_current(chip, current_ma);
+			if (rc < 0)
+				pr_err("Couldn't set %dmA rc = %d\n", current_ma, rc);
+			break;
+		}
+#endif //CONFIG_HTC_BATT_PCN0020
 		if ((current_ma < CURRENT_150_MA) &&
 				(chip->wa_flags & SMBCHG_USB100_WA))
 			current_ma = CURRENT_150_MA;
@@ -2240,6 +2239,11 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 			}
 			chip->usb_max_current_ma = 150;
 		}
+		if (current_ma == CURRENT_500_MA) {
+// fastcharge
+#ifdef CONFIG_FORCE_FAST_CHARGE
+		if (!fcharge_enabled()) {
+#endif
 			rc = smbchg_sec_masked_write(chip,
 					chip->usb_chgpth_base + CHGPTH_CFG,
 					CFG_USB_2_3_SEL_BIT, CFG_USB_2);
@@ -2255,15 +2259,34 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 				pr_err("Couldn't set CMD_IL rc = %d\n", rc);
 				goto out;
 			}
-			chip->usb_max_current_ma = 500;			
-		}
-
+			chip->usb_max_current_ma = 500;
 #ifdef CONFIG_FORCE_FAST_CHARGE
-		if ((force_fast_charge > 0 && current_ma == CURRENT_500_MA) || current_ma == CURRENT_900_MA) {
-#else
-		if (current_ma == CURRENT_900_MA) {
+		} else {
+			// overriding with the 900 mA chip settings on the charger hardware too
+			// but only for 500 ma case, so it's remaining safe with new USB technologies
+			rc = smbchg_sec_masked_write(chip,
+					chip->usb_chgpth_base + CHGPTH_CFG,
+					CFG_USB_2_3_SEL_BIT, CFG_USB_3);
+			pr_err("%s FCHARGE sec_masked_write USB_3 rc %d current_ma %d\n", __func__ , rc, current_ma);
+			if (rc < 0) {
+				pr_err("Couldn't set CHGPTH_CFG rc = %d\n", rc);
+				goto out;
+			}
+			rc = smbchg_masked_write(chip,
+					chip->usb_chgpth_base + CMD_IL,
+					USBIN_MODE_CHG_BIT | USB51_MODE_BIT,
+					USBIN_LIMITED_MODE | USB51_500MA);
+			pr_err("%s FCHARGE sec_masked_write USB51_500MA rc %d current_ma %d\n", __func__ , rc, current_ma);
+			if (rc < 0) {
+				pr_err("Couldn't set CMD_IL rc = %d\n", rc);
+				goto out;
+			}
+			chip->usb_max_current_ma = 900;
+			pr_err("%s FCHARGE overridden max current ma on chip 900 \n", __func__ );
+		}
 #endif
-
+		}
+		if (current_ma == CURRENT_900_MA) {
 			rc = smbchg_sec_masked_write(chip,
 					chip->usb_chgpth_base + CHGPTH_CFG,
 					CFG_USB_2_3_SEL_BIT, CFG_USB_3);
@@ -2283,7 +2306,11 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 		}
 		break;
 	case POWER_SUPPLY_TYPE_USB_CDP:
+#ifdef CONFIG_HTC_BATT
+		if (current_ma <= CURRENT_1500_MA) {
+#else
 		if (current_ma < CURRENT_1500_MA) {
+#endif //CONFIG_HTC_BATT
 			/* use override for CDP */
 			rc = smbchg_masked_write(chip,
 					chip->usb_chgpth_base + CMD_IL,
@@ -2302,7 +2329,6 @@ static int smbchg_set_usb_current_max(struct smbchg_chip *chip,
 out:
 	pr_smb(PR_STATUS, "usb type = %d current set to %d mA\n",
 			chip->usb_supply_type, chip->usb_max_current_ma);
-
 	return rc;
 }
 
@@ -2311,12 +2337,6 @@ out:
 #define USBIN_HVDCP_SEL_9V_BIT			BIT(1)
 #define SCHG_LITE_USBIN_HVDCP_SEL_9V_BIT	BIT(2)
 #define SCHG_LITE_USBIN_HVDCP_SEL_BIT		BIT(0)
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-#define RP_56K          56
-#define RP_22K          22
-#define RP_10K          10
-#define RP_NONE         0
-#endif
 static int smbchg_get_min_parallel_current_ma(struct smbchg_chip *chip)
 {
 	int rc;
@@ -2341,6 +2361,9 @@ static int smbchg_get_min_parallel_current_ma(struct smbchg_chip *chip)
 	return chip->parallel.min_current_thr_ma;
 }
 
+#ifdef CONFIG_HTC_BATT_WA_PCN0011
+#define HVDCP_DETECT_FAILED_RETRY_MS 30000
+#endif //CONFIG_HTC_BATT_WA_PCN0011
 static bool is_hvdcp_present(struct smbchg_chip *chip)
 {
 	int rc;
@@ -2365,6 +2388,17 @@ static bool is_hvdcp_present(struct smbchg_chip *chip)
 
 	if ((reg & hvdcp_sel) && is_usb_present(chip))
 		return true;
+
+#ifdef CONFIG_HTC_BATT_WA_PCN0011
+	if ((chip->usb_supply_type == POWER_SUPPLY_TYPE_USB_HVDCP)
+		&& is_usb_present(chip)) {
+		if (delayed_work_pending(&chip->rerun_apsd_work))
+			cancel_delayed_work(&chip->rerun_apsd_work);
+		schedule_delayed_work(&chip->rerun_apsd_work,
+				msecs_to_jiffies(HVDCP_DETECT_FAILED_RETRY_MS));
+		pr_smb(PR_STATUS, "Schedule RERUN APSD for hvdcp_present detect failed.\n");
+	}
+#endif //CONFIG_HTC_BATT_WA_PCN0011
 
 	return false;
 }
@@ -2414,7 +2448,6 @@ static int smbchg_set_fastchg_current_raw(struct smbchg_chip *chip,
 			current_ma, chip->tables.usb_ilim_ma_table[cur_val]);
 
 	chip->fastchg_current_ma = chip->tables.usb_ilim_ma_table[cur_val];
-
 	return rc;
 }
 
@@ -2427,11 +2460,7 @@ static int smbchg_set_fastchg_current_raw(struct smbchg_chip *chip,
 #define USBIN_ACTIVE_PWR_SRC_BIT	BIT(1)
 #define DCIN_ACTIVE_PWR_SRC_BIT		BIT(0)
 #define PARALLEL_REENABLE_TIMER_MS	1000
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-#define PARALLEL_CHG_THRESHOLD_CURRENT	1000
-#else
 #define PARALLEL_CHG_THRESHOLD_CURRENT	1800
-#endif
 static bool smbchg_is_usbin_active_pwr_src(struct smbchg_chip *chip)
 {
 	int rc;
@@ -2499,15 +2528,14 @@ static int smbchg_sw_esr_pulse_en(struct smbchg_chip *chip, bool en)
 #define AICL_EN_BIT				BIT(2)
 static void smbchg_rerun_aicl(struct smbchg_chip *chip)
 {
-#ifdef CONFIG_LGE_PM
-	if (!chip->usb_present)
+#ifdef CONFIG_HTC_BATT_PCN0020
+	int pd_current;
+	if (htc_battery_get_pd_type(&pd_current)){
+		set_aicl_enable(false);
+		pr_info("PD charger donot rerun AICL.\n");
 		return;
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	if (factory_mode) //disable aicl with factory cable
-		return;
-#endif
-#endif
-
+	}
+#endif //CONFIG_HTC_BATT_PCN0020
 	pr_smb(PR_STATUS, "Rerunning AICL...\n");
 	smbchg_sec_masked_write(chip, chip->usb_chgpth_base + USB_AICL_CFG,
 			AICL_EN_BIT, 0);
@@ -2577,15 +2605,9 @@ static void smbchg_parallel_usb_disable(struct smbchg_chip *chip)
 	smbchg_rerun_aicl(chip);
 }
 
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-#define PARALLEL_TAPER_MAX_TRIES		10
-#define PARALLEL_FCC_MA_REDUCTION		100
-#define MINIMUM_PARALLEL_FCC_MA			300
-#else
 #define PARALLEL_TAPER_MAX_TRIES		3
 #define PARALLEL_FCC_PERCENT_REDUCTION		75
 #define MINIMUM_PARALLEL_FCC_MA			500
-#endif
 #define CHG_ERROR_BIT		BIT(0)
 #define BAT_TAPER_MODE_BIT	BIT(6)
 static void smbchg_parallel_usb_taper(struct smbchg_chip *chip)
@@ -2617,12 +2639,8 @@ try_again:
 		smbchg_parallel_usb_disable(chip);
 		goto done;
 	}
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-	pval.intval = (parallel_fcc_ma - PARALLEL_FCC_MA_REDUCTION);
-#else
 	pval.intval = ((parallel_fcc_ma
 			* PARALLEL_FCC_PERCENT_REDUCTION) / 100);
-#endif
 	pr_smb(PR_STATUS, "reducing FCC of parallel charger to %d\n",
 		pval.intval);
 	/* Change it to uA */
@@ -2648,128 +2666,10 @@ try_again:
 	}
 	taper_irq_en(chip, true);
 done:
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-	schedule_delayed_work(&chip->parallel_usb_taper_work, 0);
-#endif
 	mutex_unlock(&chip->parallel.lock);
 	smbchg_relax(chip, PM_PARALLEL_TAPER);
 }
 
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-static void smbchg_parallel_usb_taper_work(struct work_struct *work)
-{
-	struct smbchg_chip *chip = container_of(work,
-				struct smbchg_chip,
-				parallel_usb_taper_work.work);
-	struct power_supply *parallel_psy = get_parallel_psy(chip);
-	union power_supply_propval pval = {0, };
-	int fastchg_current_ma;
-	int main_fcc_current_ma, parallel_fcc_ma;
-
-	if (chip->parallel.current_max_ma == 0) {
-		pr_smb(PR_STATUS, "Not parallel charging, unvote\n");
-		vote(chip->fcc_votable, TAPER_FCC_VOTER, false, 0);
-		return;
-	}
-
-	parallel_psy->get_property(parallel_psy,
-			POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, &pval);
-	parallel_fcc_ma = pval.intval / 1000;
-
-	/*
-	 * if parallel_fcc_ma is 0, maybe ESR pulse disabled parallel.
-	 * so retry after ESR pulse done
-	 */
-	if (parallel_fcc_ma == 0) {
-		schedule_delayed_work(&chip->parallel_usb_taper_work,
-				msecs_to_jiffies(2000));
-		return;
-	}
-
-	main_fcc_current_ma = chip->fastchg_current_ma;
-
-	fastchg_current_ma = main_fcc_current_ma + parallel_fcc_ma;
-
-	/* trigger re-split main / parallel fast charge current */
-	pr_smb(PR_LGE, "TOTAL IBAT[%d (%d + %d)] vote for split current\n",
-			fastchg_current_ma,
-			main_fcc_current_ma, parallel_fcc_ma);
-	vote(chip->fcc_votable, TAPER_FCC_VOTER, true, fastchg_current_ma);
-}
-
-#define BATTCHG_PROTECT_POLLING_MS 30000
-#define BATTCHG_PROTECT_RECHECK_MS 10000
-#define BATTCHG_PROTECT_FCC_MA_REDUCTION 100
-#ifdef CONFIG_MACH_MSM8996_LUCYE
-#define BATTCHG_PROTECT_LIMIT_VOTLAGE 4250
-#define BATTCHG_PROTECT_CLEAR_VOTLAGE 4150
-#else
-#define BATTCHG_PROTECT_LIMIT_VOTLAGE 4300
-#define BATTCHG_PROTECT_CLEAR_VOTLAGE 4200
-#endif
-static void smbchg_battchg_protect_work(struct work_struct *work)
-{
-	struct smbchg_chip *chip = container_of(work,
-				struct smbchg_chip,
-				battchg_protect_work.work);
-	int min_fastchg_current_ma = chip->cfg_fastchg_current_ma * 80 / 100;
-	int fastchg_current_ma = get_effective_result(chip->fcc_votable);
-	int effective_id = get_effective_client_id(chip->fcc_votable);
-	int vbatt = get_prop_batt_voltage_now(chip) / 1000;
-
-	if (vbatt <= BATTCHG_PROTECT_CLEAR_VOTLAGE) {
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-		if (effective_id == TAPER_FCC_VOTER) {
-			pr_smb(PR_LGE, "battery voltage too low, unvote id %d\n",
-					TAPER_FCC_VOTER);
-			vote(chip->fcc_votable, TAPER_FCC_VOTER, false, 0);
-
-			/* update effective id */
-			effective_id = get_effective_client_id(chip->fcc_votable);
-		}
-#endif
-		if (effective_id == BATTCHG_PROTECT_FCC_VOTER) {
-			pr_smb(PR_LGE, "battery voltage too low, unvote id %d\n",
-					BATTCHG_PROTECT_FCC_VOTER);
-			vote(chip->fcc_votable,
-					BATTCHG_PROTECT_FCC_VOTER, false, 0);
-		}
-	}
-
-	if (get_prop_charge_type(chip) != POWER_SUPPLY_CHARGE_TYPE_FAST) {
-		if (effective_id == BATTCHG_PROTECT_FCC_VOTER)
-			vote(chip->fcc_votable,
-					BATTCHG_PROTECT_FCC_VOTER, false, 0);
-		goto reschedule;
-	}
-
-	if (fastchg_current_ma <= min_fastchg_current_ma)
-		goto reschedule;
-
-	if (vbatt <= BATTCHG_PROTECT_LIMIT_VOTLAGE)
-		goto reschedule;
-
-	fastchg_current_ma -= BATTCHG_PROTECT_FCC_MA_REDUCTION;
-	pr_smb(PR_LGE, "battery voltage reached threshold (%d > %d), "\
-			"reducing fcc to %d\n",
-			vbatt, BATTCHG_PROTECT_LIMIT_VOTLAGE, fastchg_current_ma);
-	vote(chip->fcc_votable, BATTCHG_PROTECT_FCC_VOTER, true,
-			fastchg_current_ma);
-
-	schedule_delayed_work(&chip->battchg_protect_work,
-			msecs_to_jiffies(BATTCHG_PROTECT_RECHECK_MS));
-	return;
-
-reschedule:
-	schedule_delayed_work(&chip->battchg_protect_work,
-			msecs_to_jiffies(BATTCHG_PROTECT_POLLING_MS));
-}
-#endif
-
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-#define MAIN_CHG_ICL_PERCENT_MAX 70
-#define MAIN_CHG_ICL_PERCENT_MIN 40
-#endif
 static void smbchg_parallel_usb_enable(struct smbchg_chip *chip,
 		int total_current_ma)
 {
@@ -2780,9 +2680,6 @@ static void smbchg_parallel_usb_enable(struct smbchg_chip *chip,
 	int fcc_ma, main_fastchg_current_ma;
 	int target_parallel_fcc_ma, supplied_parallel_fcc_ma;
 	int parallel_chg_fcc_percent;
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-	int previous_smbchg_main_chg_icl_percent;
-#endif
 
 	if (!parallel_psy || !chip->parallel_charger_detected)
 		return;
@@ -2795,24 +2692,10 @@ static void smbchg_parallel_usb_enable(struct smbchg_chip *chip,
 			"Couldn't set Vflt on parallel psy rc: %d\n", rc);
 		return;
 	}
-
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-	/* estimate efficient smbchg_main_chg_icl_percent */
-	fcc_ma = get_effective_result_locked(chip->fcc_votable);
-
-	previous_smbchg_main_chg_icl_percent = smbchg_main_chg_icl_percent;
-
-	smbchg_main_chg_icl_percent = MAIN_CHG_ICL_PERCENT_MAX - (fcc_ma / 100);
-	if (smbchg_main_chg_icl_percent < MAIN_CHG_ICL_PERCENT_MIN)
-		smbchg_main_chg_icl_percent = MAIN_CHG_ICL_PERCENT_MIN;
-	pr_smb(PR_LGE, "New main ICL percent = %d\n", smbchg_main_chg_icl_percent);
-#endif
-
 	/* Set USB ICL */
 	target_icl_ma = get_effective_result_locked(chip->usb_icl_votable);
 	new_parallel_cl_ma = total_current_ma
 			* (100 - smbchg_main_chg_icl_percent) / 100;
-
 	taper_irq_en(chip, true);
 	power_supply_set_present(parallel_psy, true);
 	power_supply_set_current_limit(parallel_psy,
@@ -2913,19 +2796,6 @@ static bool smbchg_is_parallel_usb_ok(struct smbchg_chip *chip,
 		return false;
 	}
 
-#ifdef CONFIG_LGE_PM
-	/*
-	 * If type-c current is reasonable,
-	 * skip check usb type and enable parallel charge.
-	 */
-	if (chip->typec_psy &&
-			chip->typec_current_ma >= smbchg_default_dcp_icl_ma) {
-		pr_smb(PR_LGE, "typec_current_ma is %d, continuing\n",
-				chip->typec_current_ma);
-		goto skip_usb_supply_type;
-	}
-#endif
-
 	rc = smbchg_read(chip, &reg, chip->misc_base + IDEV_STS, 1);
 	if (rc < 0) {
 		dev_err(chip->dev, "Couldn't read status 5 rc = %d\n", rc);
@@ -2942,18 +2812,6 @@ static bool smbchg_is_parallel_usb_ok(struct smbchg_chip *chip,
 		pr_smb(PR_STATUS, "SDP adapter, skipping\n");
 		return false;
 	}
-
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-	if (chip->usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP &&
-			chip->very_weak_charger) {
-		pr_smb(PR_LGE, "DCP adapter is weak, skipping\n");
-		return false;
-	}
-#endif
-
-#ifdef CONFIG_LGE_PM
-skip_usb_supply_type:
-#endif
 
 	/*
 	 * If USBIN is suspended or not the active power source, do not enable
@@ -3011,14 +2869,6 @@ skip_usb_supply_type:
 	 */
 	if (parallel_cl_ma <= SUSPEND_CURRENT_MA)
 		parallel_cl_ma = 0;
-
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-	/*
-	 * If parallel disabled by ESR pulse, use saved parallel current before
-	 */
-	if (fcc_voter_id == ESR_PULSE_FCC_VOTER)
-		parallel_cl_ma = chip->parallel.current_max_ma;
-#endif
 
 	/*
 	 * Set the parallel charge path's input current limit (ICL)
@@ -3100,11 +2950,6 @@ static int charging_suspend_vote_cb(struct device *dev, int suspend,
 	int rc;
 	struct smbchg_chip *chip = dev_get_drvdata(dev);
 
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-	pr_smb(PR_LGE, "client[%d], suspend[%d], last_client[%d], last_suspend[%d]\n",
-		client, suspend, last_client, last_suspend);
-#endif
-
 	rc = smbchg_charging_en(chip, !suspend);
 	if (rc < 0) {
 		dev_err(chip->dev,
@@ -3151,6 +2996,26 @@ static int dc_suspend_vote_cb(struct device *dev, int suspend,
 	return rc;
 }
 
+#define HVDCP_EN_BIT			BIT(3)
+static int smbchg_hvdcp_enable_cb(struct device *dev, int enable,
+						int client, int last_enable,
+						int last_client)
+{
+	int rc = 0;
+	struct smbchg_chip *chip = dev_get_drvdata(dev);
+
+	pr_err("smbchg_hvdcp_enable_cb  enable %d last_enable %d\n",
+			enable, last_enable);
+	rc = smbchg_sec_masked_write(chip,
+				chip->usb_chgpth_base + CHGPTH_CFG,
+				HVDCP_EN_BIT, enable ? HVDCP_EN_BIT : 0);
+	if (rc < 0)
+		dev_err(chip->dev, "Couldn't %s HVDCP rc=%d\n",
+				enable ? "enable" : "disable", rc);
+
+	return rc;
+}
+
 static int set_fastchg_current_vote_cb(struct device *dev,
 						int fcc_ma,
 						int client,
@@ -3174,6 +3039,24 @@ static int set_fastchg_current_vote_cb(struct device *dev,
 	smbchg_parallel_usb_check_ok(chip);
 	return 0;
 }
+
+#ifdef CONFIG_HTC_BATT_PCN0013
+static int htcchg_set_fastchg_current(struct smbchg_chip *chip,
+							int current_ma)
+{
+	int rc = 0;
+
+	pr_smb(PR_STATUS, "htcchg setting FCC to %d\n", current_ma);
+
+	if (current_ma > 0)
+		rc = vote(chip->fcc_votable, HTCCHG_FCC_VOTER, true, current_ma);
+	else
+		rc = vote(chip->fcc_votable, HTCCHG_FCC_VOTER, false, 3000);
+	if (rc < 0)
+		pr_err("Couldn't vote en rc %d\n", rc);
+	return rc;
+}
+#endif //CONFIG_HTC_BATT_PCN0013
 
 static int smbchg_set_fastchg_current_user(struct smbchg_chip *chip,
 							int current_ma)
@@ -3476,6 +3359,17 @@ static int set_usb_current_limit_vote_cb(struct device *dev,
 			return rc;
 		}
 	}
+
+#ifdef CONFIG_HTC_BATT_WA_PCN0013
+		/* clear hvdcp_icl_voter and restore HVDCP detection if charger type is AC */
+		if (effective_id == HVDCP_ICL_VOTER){
+			if (chip->usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP){
+				pr_smb(PR_STATUS, "AC type but HVDCP limit ICL set, re-detect HVDCP\n");
+				schedule_work(&chip->hvdcp_redet_work);
+				return 0;
+			}
+		}
+#endif //CONFIG_HTC_BATT_WA_PCN0013
 
 	/* skip the aicl rerun if hvdcp icl voter is active */
 	if (effective_id == HVDCP_ICL_VOTER)
@@ -3859,6 +3753,14 @@ static int smbchg_switch_buck_frequency(struct smbchg_chip *chip,
 		return 0;
 	}
 
+#ifdef CONFIG_HTC_BATT_WA_PCN0014
+	if(chip->htc_wa_flags & HTC_FORCE_FSW_1MHZ_WA) {
+		pr_smb(PR_STATUS, "Fsw already forced to 1MHz\n");
+		chip->flash_active = flash_active;
+		return 0;
+	}
+#endif //CONFIG_HTC_BATT_WA_PCN0014
+
 	/*
 	 * As per the systems team recommendation, before the flash fires,
 	 * buck switching frequency(Fsw) needs to be increased to 1MHz. Once the
@@ -4140,7 +4042,7 @@ static void smbchg_aicl_deglitch_wa_en(struct smbchg_chip *chip, bool en)
 	int rc;
 
 	rc = vote(chip->aicl_deglitch_short_votable,
-				VARB_WORKAROUND_VOTER, en, 0);
+		VARB_WORKAROUND_VOTER, en, 0);
 	if (rc < 0) {
 		pr_err("Couldn't vote %s deglitch rc=%d\n",
 				en ? "short" : "long", rc);
@@ -4148,12 +4050,18 @@ static void smbchg_aicl_deglitch_wa_en(struct smbchg_chip *chip, bool en)
 	}
 	pr_smb(PR_STATUS, "AICL deglitch set to %s\n", en ? "short" : "long");
 
+#ifdef CONFIG_HTC_BATT_WA_PCN0008
+			/*No need to disable AICL rerun*/
+			/*To avoid suspend all the instances of AICL disable shoould be removed*/
+	pr_smb(PR_STATUS, "Not disable aicl rerun.\n");
+#else
 	rc = vote(chip->hw_aicl_rerun_enable_indirect_votable,
 			VARB_WORKAROUND_VOTER, en, 0);
 	if (rc < 0) {
 		pr_err("Couldn't vote hw aicl rerun rc= %d\n", rc);
 		return;
 	}
+#endif //CONFIG_HTC_BATT_WA_PCN0008
 	chip->aicl_deglitch_short = en;
 }
 
@@ -4237,54 +4145,8 @@ static int smbchg_config_chg_battery_type(struct smbchg_chip *chip)
 	int rc = 0, max_voltage_uv = 0, fastchg_ma = 0, ret = 0, iterm_ua = 0;
 	struct device_node *batt_node, *profile_node;
 	struct device_node *node = chip->spmi->dev.of_node;
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_BATTERY_ID_CHECKER
-	union lge_power_propval lge_val = {0,};
-#else
 	union power_supply_propval prop = {0,};
-#endif
 
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_BATTERY_ID_CHECKER
-	chip->lge_batt_id_lpc = lge_power_get_by_name("lge_batt_id");
-	if (chip->lge_batt_id_lpc) {
-		if (!chip->battery_name)
-			chip->battery_name = kmalloc(30, GFP_KERNEL);
-		rc = chip->lge_batt_id_lpc->get_property(chip->lge_batt_id_lpc,
-				LGE_POWER_PROP_BATT_INFO, &lge_val);
-		sprintf(chip->battery_name,"%s", lge_val.strval);
-		pr_err("BATTERY FULL NAME : %s\n", chip->battery_name);
-	} else {
-		chip->battery_name = UNKNOWN_BATT_TYPE;
-		pr_err("[LGE-BID] Fail to get lge_batt_id property\n");
-	}
-
-	if (!strcmp(chip->battery_name, UNKNOWN_BATT_TYPE) ||
-		!strcmp(chip->battery_name, LOADING_BATT_TYPE)) {
-		pr_smb(PR_MISC, "Battery-type not identified\n");
-		return 0;
-	}
-
-	if (chip->battery_type &&
-			!strcmp(chip->battery_name, chip->battery_type))
-		return 0;
-
-	batt_node = of_parse_phandle(node, "qcom,battery-data", 0);
-	if (!batt_node) {
-		pr_smb(PR_MISC, "No batterydata available\n");
-		return 0;
-	}
-
-#if defined (CONFIG_MACH_MSM8996_ELSA)
-	profile_node = of_batterydata_get_best_profile(batt_node,NULL);
-#else
-	profile_node = of_batterydata_get_best_profile(batt_node,
-							"bms", NULL);
-#endif
-	if (!profile_node) {
-		pr_err("couldn't find profile handle\n");
-		return -EINVAL;
-	}
-	chip->battery_type = chip->battery_name;
-#else
 	rc = chip->bms_psy->get_property(chip->bms_psy,
 			POWER_SUPPLY_PROP_BATTERY_TYPE, &prop);
 	if (rc) {
@@ -4313,7 +4175,7 @@ static int smbchg_config_chg_battery_type(struct smbchg_chip *chip)
 		return -EINVAL;
 	}
 	chip->battery_type = prop.strval;
-#endif
+
 	/* change vfloat */
 	rc = of_property_read_u32(profile_node, "qcom,max-voltage-uv",
 						&max_voltage_uv);
@@ -4391,39 +4253,12 @@ static int smbchg_config_chg_battery_type(struct smbchg_chip *chip)
 static void check_battery_type(struct smbchg_chip *chip)
 {
 	union power_supply_propval prop = {0,};
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_BATTERY_ID_CHECKER
-	union lge_power_propval lge_val = {0,};
-#endif
 	bool en;
 
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_BATTERY_ID_CHECKER
-	chip->lge_batt_id_lpc = lge_power_get_by_name("lge_batt_id");
-	if (chip->lge_batt_id_lpc) {
-		chip->lge_batt_id_lpc->get_property(chip->lge_batt_id_lpc,
-				LGE_POWER_PROP_BATT_INFO, &lge_val);
-		en = (strcmp(lge_val.strval, UNKNOWN_BATT_TYPE) != 0
-				|| chip->charge_unknown_battery)
-			&& (strcmp(lge_val.strval, LOADING_BATT_TYPE) != 0);
-
-		vote(chip->battchg_suspend_votable,
-				BATTCHG_UNKNOWN_BATTERY_EN_VOTER, !en, 0);
-
-		if (!chip->skip_usb_suspend_for_fake_battery) {
-			chip->bms_psy->get_property(chip->bms_psy,
-				POWER_SUPPLY_PROP_RESISTANCE_ID, &prop);
-			/* suspend USB path for invalid battery-id */
-			en = (prop.intval <= MAX_INV_BATT_ID &&
-				prop.intval >= MIN_INV_BATT_ID) ? 1 : 0;
-			vote(chip->usb_suspend_votable, FAKE_BATTERY_EN_VOTER,
-				en, 0);
-		}
-	} else {
-#endif
 	if (!chip->bms_psy && chip->bms_psy_name)
 		chip->bms_psy =
 			power_supply_get_by_name((char *)chip->bms_psy_name);
 	if (chip->bms_psy) {
-#ifndef CONFIG_BATTERY_MAX17050
 		chip->bms_psy->get_property(chip->bms_psy,
 				POWER_SUPPLY_PROP_BATTERY_TYPE, &prop);
 		en = (strcmp(prop.strval, UNKNOWN_BATT_TYPE) != 0
@@ -4431,7 +4266,7 @@ static void check_battery_type(struct smbchg_chip *chip)
 			&& (strcmp(prop.strval, LOADING_BATT_TYPE) != 0);
 		vote(chip->battchg_suspend_votable,
 				BATTCHG_UNKNOWN_BATTERY_EN_VOTER, !en, 0);
-#endif
+
 		if (!chip->skip_usb_suspend_for_fake_battery) {
 			chip->bms_psy->get_property(chip->bms_psy,
 				POWER_SUPPLY_PROP_RESISTANCE_ID, &prop);
@@ -4442,304 +4277,52 @@ static void check_battery_type(struct smbchg_chip *chip)
 				en, 0);
 		}
 	}
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_BATTERY_ID_CHECKER
-	}
-#endif
 }
-
-#ifdef CONFIG_LGE_USB_FLOATED_CHARGER_DETECT
-static void smbchg_rerun_apsd(struct smbchg_chip *chip)
-{
-	int rc, count;
-	enum power_supply_type usb_supply_type;
-	char *usb_type_name = "null";
-
-	pr_smb(PR_MISC, "Disable AICL\n");
-	smbchg_sec_masked_write(chip, chip->usb_chgpth_base + USB_AICL_CFG,
-			AICL_EN_BIT, 0);
-
-	/*  0xF1: USBIN_CHGR_CFG
-	 *  0x3 : USBIN_ADAPTER_9V */
-	rc = smbchg_sec_masked_write(chip,
-			chip->usb_chgpth_base + 0xF1, 0xFF, 0x3);
-	if (rc < 0) {
-		dev_err(chip->dev, "Couldn't write usb allowance rc=%d\n", rc);
-		return;
-	}
-
-    /* allow 5 to 9V chargers
-	 * 0xF1: USBIN_CHGR_CFG
-	 * 0x07: ADAPTER_ALLOWANCE_MASK
-	 * 0x02: USBIN_ADAPTER_5V_9V_CONT */
-	rc = smbchg_sec_masked_write(chip,
-			chip->usb_chgpth_base + 0xF1, 0x7, 0x2);
-	if (rc < 0)
-		pr_err("Couldn't write usb allowance rc=%d\n", rc);
-
-	pr_smb(PR_MISC, "Enable AICL\n");
-	smbchg_sec_masked_write(chip, chip->usb_chgpth_base + USB_AICL_CFG,
-			AICL_EN_BIT, AICL_EN_BIT);
-
-	for (count = 0; count < 10; count++) {
-		read_usb_type(chip, &usb_type_name, &usb_supply_type);
-		if (usb_supply_type != POWER_SUPPLY_TYPE_UNKNOWN) {
-			break;
-		}
-		msleep(100);
-	}
-}
-#endif
-
-#ifdef CONFIG_LGE_PM_PSEUDO_BATTERY
-#define VBL_CFG    	0xF1
-#define VBL_MASK 	0x0F
-static void smbchg_set_vbat_low_thr(struct smbchg_chip *chip)
-{
-	u8 reg;
-	int rc;
-
-	rc = smbchg_read(chip, &reg, chip->bat_if_base + VBL_CFG, 1);
-
-	if (get_pseudo_batt_info(PSEUDO_BATT_MODE)) {
-		if ((reg & VBL_MASK) != 0x01) {
-			rc = smbchg_sec_masked_write(chip,
-					chip->bat_if_base + VBL_CFG, VBL_MASK, 0x01);
-			if (rc < 0)
-				pr_err("fail to set vbat_low to 2.5V rc = %d\n", rc);
-			else
-				pr_smb(PR_LGE, "set vbat low threshold to 2.5V\n");
-		}
-	} else {
-		if ((reg & VBL_MASK) == 0x01) {
-			rc = smbchg_sec_masked_write(chip,
-					chip->bat_if_base + VBL_CFG, VBL_MASK,
-					chip->vbat_low_thr);
-			if (rc < 0)
-				pr_err("fail to set vbat low to 0x%x rc = %d\n",
-						chip->vbat_low_thr, rc);
-			else
-				pr_smb(PR_LGE, "set vbat low threshold to 0x%x\n",
-						chip->vbat_low_thr);
-		}
-	}
-}
-#endif
 
 static void smbchg_external_power_changed(struct power_supply *psy)
 {
 	struct smbchg_chip *chip = container_of(psy,
 				struct smbchg_chip, batt_psy);
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	union lge_power_propval lge_val = {0,};
-#endif
 	union power_supply_propval prop = {0,};
 	int rc, current_limit = 0, soc;
 	enum power_supply_type usb_supply_type;
 	char *usb_type_name = "null";
-#ifdef CONFIG_BATTERY_MAX17050
-	struct power_supply		*ext_fg_psy;
-#endif
 
-#ifdef CONFIG_BATTERY_MAX17050
-	ext_fg_psy = power_supply_get_by_name("ext_fg");
-	if (!ext_fg_psy) {
-#endif
-		if (chip->bms_psy_name)
-			chip->bms_psy =
-				power_supply_get_by_name((char *)chip->bms_psy_name);
+	if (chip->bms_psy_name)
+		chip->bms_psy =
+			power_supply_get_by_name((char *)chip->bms_psy_name);
 
-		smbchg_aicl_deglitch_wa_check(chip);
-		if (chip->bms_psy) {
-			check_battery_type(chip);
-			soc = get_prop_batt_capacity(chip);
-			if (chip->previous_soc != soc) {
-				chip->previous_soc = soc;
-				smbchg_soc_changed(chip);
-			}
-
-			rc = smbchg_config_chg_battery_type(chip);
-			if (rc)
-				pr_smb(PR_MISC,
-					"Couldn't update charger configuration rc=%d\n",
-										rc);
+	smbchg_aicl_deglitch_wa_check(chip);
+	if (chip->bms_psy) {
+		check_battery_type(chip);
+		soc = get_prop_batt_capacity(chip);
+		if (chip->previous_soc != soc) {
+			chip->previous_soc = soc;
+			smbchg_soc_changed(chip);
 		}
-#ifdef CONFIG_BATTERY_MAX17050
+
+		rc = smbchg_config_chg_battery_type(chip);
+		if (rc)
+			pr_smb(PR_MISC,
+				"Couldn't update charger configuration rc=%d\n",
+									rc);
 	}
-#endif
 
-#ifdef CONFIG_LGE_PM_FACTORY_CABLE
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-	if (!chip->lge_cd_lpc)
-		chip->lge_cd_lpc = lge_power_get_by_name("lge_cable_detect");
-//	chip->cd_current_limit = 0;
-	if (chip->lge_cd_lpc){
-		rc = chip->lge_cd_lpc->get_property(chip->lge_cd_lpc,
-				LGE_POWER_PROP_CURRENT_MAX, &lge_val);
-		pr_info("current_limit from cd : %d\n", lge_val.intval);
-		if (rc == 0)
-			chip->cd_current_limit = lge_val.intval / 1000;
-		else
-			chip->cd_current_limit = 0;
-	}
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-	// do nothing
-#else
-#ifdef CONFIG_LGE_USB_TYPE_C
-	if (!chip->dp_alt_mode && is_factory_cable(chip) && chip->usb_present) {
-#else
-	if (is_factory_cable(chip) && chip->usb_present) {
-#endif
-		if (!chip->lge_cd_lpc)
-			chip->lge_cd_lpc = lge_power_get_by_name("lge_cable_detect");
-		if (!chip->lge_cd_lpc) {
-			pr_err("Failed to get cable_detect property\n");
-			chip->otp_ibat_current = 500;
-		} else {
-			chip->lge_cd_lpc->get_property(chip->lge_cd_lpc,
-					LGE_POWER_PROP_CHARGING_CURRENT_MAX, &lge_val);
-			chip->otp_ibat_current = lge_val.intval / 1000;
-
-			chip->lge_cd_lpc->get_property(chip->lge_cd_lpc,
-					LGE_POWER_PROP_CURRENT_MAX,	&lge_val);
-			current_limit = lge_val.intval / 1000;
-		}
-		chip->vote_type = PIF_FCC_VOTER;
-		chip->vote_state = 1;
-		rc = vote(chip->usb_icl_votable, PSY_ICL_VOTER, true,
-				current_limit);
-		if (rc < 0)
-			pr_err("Couldn't update USB PSY ICL vote rc=%d\n", rc);
-
-		lgcc_set_ibat_current(chip, chip->otp_ibat_current);
-		pr_smb(PR_LGE, "factory cable.. skipping setting current\n");
-
-		goto skip_current_for_non_sdp;
-	}
-#endif
-#endif
-#endif
-
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SUPPORT_CCD
 	rc = chip->usb_psy->get_property(chip->usb_psy,
 				POWER_SUPPLY_PROP_CHARGING_ENABLED, &prop);
 	if (rc == 0)
 		vote(chip->usb_suspend_votable, POWER_SUPPLY_EN_VOTER,
 				!prop.intval, 0);
-#else
-	if (chip->lge_cd_lpc) {
-		rc = chip->lge_cd_lpc->get_property(chip->lge_cd_lpc,
-				LGE_POWER_PROP_CHARGING_USB_ENABLED, &lge_val);
-		if (rc == 0)
-			vote(chip->usb_suspend_votable, POWER_SUPPLY_EN_VOTER,
-					!lge_val.intval, 0);
-	} else {
-		rc = chip->usb_psy->get_property(chip->usb_psy,
-				POWER_SUPPLY_PROP_CHARGING_ENABLED, &prop);
-		if (rc == 0)
-			vote(chip->usb_suspend_votable, POWER_SUPPLY_EN_VOTER,
-					!prop.intval, 0);
-	}
-#endif
-#else
-	rc = chip->usb_psy->get_property(chip->usb_psy,
-				POWER_SUPPLY_PROP_CHARGING_ENABLED, &prop);
-	if (rc == 0)
-		vote(chip->usb_suspend_votable, POWER_SUPPLY_EN_VOTER,
-				!prop.intval, 0);
-#endif
 
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SUPPORT_CCD
 	rc = chip->usb_psy->get_property(chip->usb_psy,
 				POWER_SUPPLY_PROP_CURRENT_MAX, &prop);
 	if (rc == 0)
 		current_limit = prop.intval / 1000;
-#else
-	if (chip->lge_cd_lpc){
-		rc = chip->lge_cd_lpc->get_property(chip->lge_cd_lpc,
-				LGE_POWER_PROP_CURRENT_MAX, &lge_val);
-		if (rc == 0)
-			current_limit = lge_val.intval / 1000;
-	}
-#endif
-#else
-	rc = chip->usb_psy->get_property(chip->usb_psy,
-				POWER_SUPPLY_PROP_CURRENT_MAX, &prop);
-	if (rc == 0)
-		current_limit = prop.intval / 1000;
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-	// to do nothing
-#else
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-#ifdef CONFIG_LGE_PM_USB_CURRENT_MAX_MODE
-	if (chip->lge_cd_lpc) {
-		rc = chip->lge_cd_lpc->get_property(chip->lge_cd_lpc,
-				LGE_POWER_PROP_USB_CURRENT_MAX_MODE, &lge_val);
-		if (rc == 0 && lge_val.intval == 1) {
-			chip->cfg_override_usb_current = true;
-
-			rc = chip->lge_cd_lpc->get_property(chip->lge_cd_lpc,
-				LGE_POWER_PROP_CURRENT_MAX, &lge_val);
-			if (rc == 0) {
-				current_limit = lge_val.intval / 1000;
-				pr_smb(PR_LGE, "usb current max. setting current %d\n",
-						current_limit);
-			}
-		}
-	}
-#endif
-#endif
-#endif
-#ifdef CONFIG_LGE_PM
-	if (chip->typec_psy && chip->typec_current_ma)
-		goto  skip_current_for_non_sdp;
-#endif
 
 	read_usb_type(chip, &usb_type_name, &usb_supply_type);
+
 	if (usb_supply_type != POWER_SUPPLY_TYPE_USB)
 		goto  skip_current_for_non_sdp;
-
-#ifdef CONFIG_LGE_USB_FLOATED_CHARGER_DETECT
-	if (lge_get_boot_mode() != LGE_BOOT_MODE_CHARGERLOGO) {
-		if (usb_supply_type == POWER_SUPPLY_TYPE_USB) {
-			chip->usb_psy->get_property(chip->usb_psy,
-					POWER_SUPPLY_PROP_APSD_RERUN_NEED, &prop);
-			if (prop.intval == 1) {
-				pr_smb(PR_LGE, "rerun apsd\n");
-				prop.intval = 0;
-				chip->usb_psy->set_property(chip->usb_psy,
-						POWER_SUPPLY_PROP_APSD_RERUN_NEED, &prop);
-				smbchg_rerun_apsd(chip);
-				goto skip_current_for_non_sdp;
-			}
-		}
-	} else {
-		if (usb_supply_type == POWER_SUPPLY_TYPE_USB) {
-			chip->usb_psy->get_property(chip->usb_psy,
-					POWER_SUPPLY_PROP_APSD_RERUN_NEED, &prop);
-			if (prop.intval == 1) {
-				pr_smb(PR_LGE, "set HC mode\n");
-				rc = smbchg_masked_write(chip,
-						chip->usb_chgpth_base + CMD_IL,
-						ICL_OVERRIDE_BIT,
-						ICL_OVERRIDE_BIT);
-				if (rc < 0)
-					pr_err("Couldn't set override rc = %d\n", rc);
-
-				rc = smbchg_masked_write(chip,
-						chip->usb_chgpth_base + CMD_IL,
-						USBIN_MODE_CHG_BIT,
-						USBIN_HC_MODE);
-				if (rc < 0)
-					dev_err(chip->dev, "Couldn't write cfg 5 rc = %d\n", rc);
-			}
-		}
-	}
-#endif
 
 	pr_smb(PR_MISC, "usb type = %s current_limit = %d\n",
 			usb_type_name, current_limit);
@@ -4749,300 +4332,12 @@ static void smbchg_external_power_changed(struct power_supply *psy)
 	if (rc < 0)
 		pr_err("Couldn't update USB PSY ICL vote rc=%d\n", rc);
 
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	if (chip->lge_cd_lpc) {
-		rc = chip->lge_cd_lpc->get_property(chip->lge_cd_lpc,
-				LGE_POWER_PROP_CHARGING_ENABLED, &lge_val);
-		if (rc == 0) {
-			if (!lge_val.intval)
-				vote(chip->battchg_suspend_votable, LGE_CD_EN_VOTER,
-						!prop.intval, 0);
-		}
-	}
-#endif
-
 skip_current_for_non_sdp:
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-#ifdef CONFIG_LGE_USB_TYPE_C
-		if (!chip->typec_psy) {
-			chip->typec_psy = power_supply_get_by_name("usb_pd");
-			if (IS_ERR(chip->typec_psy))
-				chip->typec_psy = 0;
-		}
-		if (chip->typec_psy) {
-			rc = chip->typec_psy->get_property(chip->typec_psy,
-					POWER_SUPPLY_PROP_CTYPE_RP ,&prop);
-			if (rc == 0) {
-				if ((chip->ctype_rp != prop.intval) ||
-						(chip->before_usb_supply_type !=
-						 usb_supply_type)) {
-					chip->ctype_rp = prop.intval;
-					if ((chip->ctype_rp == 1) &&
-						(usb_supply_type ==
-							 POWER_SUPPLY_TYPE_USB_DCP)) {
-						schedule_delayed_work(&chip->hvdcp_det_prepare_work,
-							msecs_to_jiffies(500));
-					}
-				}
-			}
-			rc = chip->typec_psy->get_property(chip->typec_psy,
-					POWER_SUPPLY_PROP_TYPE, &prop);
-			pr_info("usbc_type : %d, usb_supply_type : %d\n",
-					prop.intval, usb_supply_type);
-			if (rc == 0) {
-				if ((prop.intval != 0) && (usb_supply_type !=
-							POWER_SUPPLY_TYPE_USB)) {
-					pr_info ("cd_current_limit is %d\n", chip->cd_current_limit);
-					if (chip->cd_current_limit != 0){
-						rc = vote(chip->usb_icl_votable, PSY_ICL_VOTER, true,
-								chip->cd_current_limit);
-						if (rc < 0)
-							pr_err("Couldn't update USB PSY ICL vote rc=%d\n", rc);
-						}
-					}
-
-			}
-		}
-		chip->before_usb_supply_type = usb_supply_type;
-#endif
-#endif
-#endif
 	smbchg_vfloat_adjust_check(chip);
+
 	power_supply_changed(&chip->batt_psy);
 }
 
-#ifdef CONFIG_LGE_PM_LGE_POWER_CORE
-static char *lge_cable_type_str[] = {
-       "NOT INIT", "MHL 1K", "U_28P7K",
-       "28P7K", "56K", "100K",  "130K",
-       "180K", "200K", "220K",  "270K",
-       "330K", "620K", "910K",  "OPEN"
-};
-
-static void smbchg_external_lge_power_changed(struct power_supply *psy)
-{
-	struct smbchg_chip *chip
-			= container_of(psy, struct smbchg_chip,
-								batt_psy);
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SUPPORT_CCD
-	// do nothing
-#else
-	int fcc_ma = 0;
-#endif
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	int rc = 0;
-	union lge_power_propval lge_val = {0,};
-	int factory_cable = 0;
-	int factory_cable_boot = 0;
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SUPPORT_CCD
-	// do nothing
-#else
-	static int before_cur;
-	int current_limit = 0;
-#endif
-	char *usb_type_name = "NOT INIT";
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SUPPORT_CCD
-	// do nothing
-#else
-	int lgcc_chg_enable = 0;
-#endif
-#endif
-
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_PSEUDO_BATTERY
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SUPPORT_CCD
-	// do nothing
-#else
-	if (!chip->lge_pb_lpc) {
-		chip->lge_pb_lpc = lge_power_get_by_name("pseudo_battery");
-	}
-	if (!chip->lge_pb_lpc) {
-		pr_err("%s : lge_pb_lpc is not yet ready\n", __func__);
-	} else {
-		rc = chip->lge_pb_lpc->get_property(chip->lge_pb_lpc,
-				LGE_POWER_PROP_PSEUDO_BATT, &lge_val);
-		if (rc == 0)
-			chip->pseudo_batt = lge_val.intval;
-	}
-#endif
-#endif
-
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	if (!chip->lge_cd_lpc)
-		chip->lge_cd_lpc = lge_power_get_by_name("lge_cable_detect");
-	if(!chip->lge_cd_lpc) {
-		pr_err("Failed to get cable_detect property\n");
-		if (is_factory_cable(chip))
-			chip->otp_ibat_current = 500;
-
-		goto skip_current_config1;
-	} else {
-		rc = chip->lge_cd_lpc->get_property(chip->lge_cd_lpc,
-				LGE_POWER_PROP_IS_FACTORY_CABLE, &lge_val);
-		factory_cable = lge_val.intval;
-
-		rc = chip->lge_cd_lpc->get_property(chip->lge_cd_lpc,
-				LGE_POWER_PROP_IS_FACTORY_MODE_BOOT, &lge_val);
-		factory_cable_boot = lge_val.intval;
-
-		if (factory_cable == 1 || factory_cable_boot == 1)
-			chip->is_factory_cable = true;
-		else
-			chip->is_factory_cable = false;
-
-		if (is_factory_cable(chip)) {
-			chip->lge_cd_lpc->get_property(chip->lge_cd_lpc,
-					LGE_POWER_PROP_CHARGING_CURRENT_MAX,
-					&lge_val);
-			chip->otp_ibat_current = lge_val.intval / 1000;
-		}
-		rc = chip->lge_cd_lpc->get_property(chip->lge_cd_lpc,
-				LGE_POWER_PROP_CABLE_TYPE, &lge_val);
-		usb_type_name = lge_cable_type_str[lge_val.intval];
-	}
-skip_current_config1:
-#endif
-
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SUPPORT_CCD
-	// do nothing
-#else
-	if (!chip->lge_cc_lpc)
-		chip->lge_cc_lpc = lge_power_get_by_name("lge_cc");
-	if (!chip->lge_cc_lpc) {
-		pr_err("Failed to get cable_detect property\n");
-		goto skip_current_config2;
-	} else {
-		fcc_ma = get_effective_result_locked(chip->fcc_votable);
-		rc = chip->lge_cc_lpc->get_property(chip->lge_cc_lpc,
-				LGE_POWER_PROP_OTP_CURRENT, &lge_val);
-		if (lge_val.intval == -1)
-			goto skip_current_config2;
-
-		chip->otp_ibat_current = lge_val.intval;
-
-		pr_info("[LGE-CC] fcc %d, otp set %d\n", fcc_ma,
-				chip->otp_ibat_current);
-
-		rc = chip->lge_cc_lpc->get_property(chip->lge_cc_lpc,
-				LGE_POWER_PROP_CHARGING_ENABLED, &lge_val);
-		if (lge_val.intval == -1)
-			goto skip_current_config2;
-		lgcc_chg_enable = lge_val.intval;
-
-		rc = chip->lge_cc_lpc->get_property(chip->lge_cc_lpc,
-				LGE_POWER_PROP_INPUT_CURRENT_MAX, &lge_val);
-		if (rc < 0) {
-			pr_err("Failed to get property from lge_cd_lpc\n");
-			current_limit = 500;
-		} else
-			current_limit = lge_val.intval / 1000;
-
-		if (chip->typec_psy && chip->typec_current_ma > current_limit)
-			current_limit = chip->typec_current_ma;
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-		// do nothing
-#else
-		if (current_limit != before_cur) {
-			pr_info("[LGE-CC] cur_limit %d\n", current_limit);
-			rc = vote(chip->usb_icl_votable, LGE_CC_ICL_VOTER,
-					(current_limit > 0) ? true : false,
-					current_limit);
-			if (rc < 0)
-				pr_err("Couldn't update USB PSY ICL vote rc=%d\n", rc);
-		}
-#endif
-		lgcc_set_ibat_current(chip, chip->otp_ibat_current);
-		lgcc_set_charging_enable(chip, lgcc_chg_enable);
-
-		before_cur = current_limit;
-
-		pr_smb(PR_MISC, "usb type = %s current_limit = %d\n",
-				usb_type_name, current_limit);
-
-		rc = chip->lge_cc_lpc->get_property(chip->lge_cc_lpc,
-				LGE_POWER_PROP_BTM_STATE, &lge_val);
-		chip->btm_state = lge_val.intval;
-		rc = chip->lge_cc_lpc->get_property(chip->lge_cc_lpc,
-			LGE_POWER_PROP_PSEUDO_BATT_UI, &lge_val);
-		chip->pseudo_ui_chg = lge_val.intval;
-		rc = chip->lge_cc_lpc->get_property(chip->lge_cc_lpc,
-			LGE_POWER_PROP_TEST_CHG_SCENARIO, &lge_val);
-		if (rc == 0)
-			chip->test_chg_scn = lge_val.intval;
-		rc = chip->lge_cc_lpc->get_property(chip->lge_cc_lpc,
-			LGE_POWER_PROP_TEST_BATT_THERM_VALUE, &lge_val);
-		if (rc == 0)
-			chip->test_batt_therm = lge_val.intval;
-	}
-skip_current_config2:
-#endif
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_STORE_MODE
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SUPPORT_CCD
-	// do nothing
-#else
-	if (!chip->lge_sm_lpc)
-		chip->lge_sm_lpc = lge_power_get_by_name("lge_sm");
-	if (!chip->lge_sm_lpc) {
-		pr_err("Failed to get storage property\n");
-		goto skip_current_config3;
-	} else {
-		rc = chip->lge_sm_lpc->get_property(chip->lge_sm_lpc,
-				LGE_POWER_PROP_STORE_DEMO_ENABLED, &lge_val);
-		if ((rc == 0) && (lge_val.intval == 1)) {
-			rc = chip->lge_sm_lpc->get_property(chip->lge_sm_lpc,
-				LGE_POWER_PROP_CHARGING_ENABLED, &lge_val);
-
-			vote(chip->battchg_suspend_votable, STORE_MODE_EN_VOTER,
-				!lge_val.intval, 0);
-		}
-	}
-skip_current_config3:
-#endif
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_VZW_REQ
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SUPPORT_CCD
-	// do nothing
-#else
-	if (!chip->lge_vzw_lpc)
-		chip->lge_vzw_lpc = lge_power_get_by_name("lge_vzw");
-	if (!chip->lge_vzw_lpc) {
-		pr_err("[LGE-VZW] Failed to get vzw_req property\n");
-		goto skip_current_config4;
-	} else {
-		rc = chip->lge_vzw_lpc->get_property(chip->lge_vzw_lpc,
-				LGE_POWER_PROP_STORE_DEMO_ENABLED, &lge_val);
-		if ((rc == 0) && (lge_val.intval == 1)) {
-			rc = chip->lge_vzw_lpc->get_property(chip->lge_vzw_lpc,
-				LGE_POWER_PROP_CHARGING_ENABLED, &lge_val);
-			vote(chip->battchg_suspend_votable, VZW_REQ_EN_VOTER,
-				!lge_val.intval, 0);
-		}
-	}
-skip_current_config4:
-#endif
-#endif
-	power_supply_changed(&chip->batt_psy);
-}
-#endif
-
-#define OTG_CFG_BATTUV          0xF2
-#define CFG_BATTUV_2P7          0x0
-#define CFG_BATTUV_2P9          0x1
-#define CFG_BATTUV_3P1          0x2
-#define CFG_BATTUV_3P3          0x3
-#define CFG_BATTUV_MASK         SMB_MASK(1, 0)
-#define OTG_CFG_ICFG            0xF3
-#define OTG_ILIMIT_250_MA       0x0
-#define OTG_ILIMIT_600_MA       0x1
-#define OTG_ILIMIT_750_MA       0x2
-#define OTG_ILIMIT_1000_MA      0x3
-#define OTG_ILIMIT_MASK         SMB_MASK(1, 0)
 static int smbchg_otg_regulator_enable(struct regulator_dev *rdev)
 {
 	int rc = 0;
@@ -5057,40 +4352,20 @@ static int smbchg_otg_regulator_enable(struct regulator_dev *rdev)
 		return rc;
 	}
 	smbchg_icl_loop_disable_check(chip);
+#ifndef CONFIG_HTC_BATT_WA_PCN0012
 	smbchg_otg_pulse_skip_disable(chip, REASON_OTG_ENABLED, true);
+#else
+	smbchg_otg_pulse_skip_disable(chip, REASON_OTG_ENABLED, false);
+#endif //CONFIG_HTC_BATT_WA_PCN0012
 
 	/* If pin control mode then return from here */
 	if (chip->otg_pinctrl)
 		return rc;
 
+#ifndef CONFIG_HTC_BATT_WA_PCN0012
 	/* sleep to make sure the pulse skip is actually disabled */
 	msleep(20);
-#ifdef CONFIG_LGE_PM
-	rc = smbchg_sec_masked_write(chip, chip->bat_if_base + 0xF6,
-			0x03, 0x03);
-	if (rc < 0) {
-		dev_err(chip->dev, "Couldn't set OTG = %d\n", rc);
-		return rc;
-	}
-	rc = smbchg_sec_masked_write(chip, chip->otg_base + OTG_CFG_BATTUV,
-			CFG_BATTUV_MASK, CFG_BATTUV_2P9);
-	if (rc < 0) {
-		dev_err(chip->dev, "Couldn't set OTG battery UVLO = %d\n", rc);
-		return rc;
-	}
-	rc = smbchg_sec_masked_write(chip, chip->bat_if_base + 0xF6,
-			0x03, 0x03);
-	if (rc < 0) {
-		dev_err(chip->dev, "Couldn't set OTG frequency = %d\n", rc);
-		return rc;
-	}
-	rc = smbchg_sec_masked_write(chip, chip->otg_base + OTG_CFG_ICFG,
-		OTG_ILIMIT_MASK, OTG_ILIMIT_1000_MA);
-	if (rc < 0) {
-		dev_err(chip->dev, "Couldn't set OTG current limit = %d\n", rc);
-		return rc;
-	}
-#endif
+#endif //CONFIG_HTC_BATT_WA_PCN0012
 	rc = smbchg_masked_write(chip, chip->bat_if_base + CMD_CHG_REG,
 			OTG_EN_BIT, OTG_EN_BIT);
 	if (rc < 0)
@@ -5098,7 +4373,6 @@ static int smbchg_otg_regulator_enable(struct regulator_dev *rdev)
 	else
 		chip->otg_enable_time = ktime_get();
 	pr_smb(PR_STATUS, "Enabling OTG Boost\n");
-
 	return rc;
 }
 
@@ -5107,28 +4381,12 @@ static int smbchg_otg_regulator_disable(struct regulator_dev *rdev)
 	int rc = 0;
 	struct smbchg_chip *chip = rdev_get_drvdata(rdev);
 
-#ifdef CONFIG_LGE_PM
-	rc = smbchg_sec_masked_write(chip, chip->bat_if_base + 0xF6,
-			0x03, 0x02);
-#endif
 	if (!chip->otg_pinctrl) {
 		rc = smbchg_masked_write(chip, chip->bat_if_base + CMD_CHG_REG,
 				OTG_EN_BIT, 0);
 		if (rc < 0)
 			dev_err(chip->dev, "Couldn't disable OTG mode rc=%d\n",
 					rc);
-	rc = smbchg_sec_masked_write(chip, chip->bat_if_base + 0xF6,
-			0x03, 0x02);
-		if (rc < 0)
-			dev_err(chip->dev, "Cann't control to return frequency rc=%d\n",
-					rc);
-	}
-
-	rc = smbchg_sec_masked_write(chip, chip->otg_base + OTG_CFG_BATTUV,
-			CFG_BATTUV_MASK, CFG_BATTUV_2P7);
-	if (rc < 0) {
-		dev_err(chip->dev, "Couldn't set OTG battery UVLO = %d\n", rc);
-		return rc;
 	}
 
 	chip->chg_otg_enabled = false;
@@ -5171,7 +4429,6 @@ struct regulator_ops smbchg_otg_reg_ops = {
 #define USBIN_ADAPTER_9V		0x3
 #define USBIN_ADAPTER_5V_9V_CONT	0x2
 #define USBIN_ADAPTER_5V_UNREGULATED_9V	0x5
-#define HVDCP_EN_BIT			BIT(3)
 static int smbchg_external_otg_regulator_enable(struct regulator_dev *rdev)
 {
 	int rc = 0;
@@ -5195,9 +4452,7 @@ static int smbchg_external_otg_regulator_enable(struct regulator_dev *rdev)
 	 * allowance to 9V, so that the audio boost operating in reverse never
 	 * gets detected as a valid input
 	 */
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + CHGPTH_CFG,
-				HVDCP_EN_BIT, 0);
+	rc = vote(chip->hvdcp_enable_votable, HVDCP_OTG_VOTER, true, 0);
 	if (rc < 0) {
 		dev_err(chip->dev, "Couldn't disable HVDCP rc=%d\n", rc);
 		return rc;
@@ -5231,9 +4486,7 @@ static int smbchg_external_otg_regulator_disable(struct regulator_dev *rdev)
 	 * value in order to allow normal USBs to be recognized as a valid
 	 * input.
 	 */
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + CHGPTH_CFG,
-				HVDCP_EN_BIT, HVDCP_EN_BIT);
+	rc = vote(chip->hvdcp_enable_votable, HVDCP_OTG_VOTER, false, 1);
 	if (rc < 0) {
 		dev_err(chip->dev, "Couldn't enable HVDCP rc=%d\n", rc);
 		return rc;
@@ -5351,137 +4604,6 @@ static int smbchg_regulator_init(struct smbchg_chip *chip)
 
 	return rc;
 }
-
-#ifdef CONFIG_LGE_PM_FACTORY_TESTMODE
-static ssize_t at_chg_status_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct smbchg_chip *chip = dev_get_drvdata(dev);
-	int r;
-	bool b_chg_ok = false;
-	int chg_type;
-
-	if (!chip) {
-		pr_err("called before init\n");
-		return -EINVAL;
-	}
-
-	chg_type = get_prop_charge_type(chip);
-	if (chg_type != POWER_SUPPLY_CHARGE_TYPE_NONE) {
-		b_chg_ok = true;
-		r = snprintf(buf, 3, "%d\n", b_chg_ok);
-		pr_info("[Diag] true ! buf = %s, charging = 1\n", buf);
-	} else {
-		b_chg_ok = false;
-		r = snprintf(buf, 3, "%d\n", b_chg_ok);
-		pr_info("[Diag] false ! buf = %s, charging = 0\n", buf);
-	}
-
-	return r;
-}
-
-#define REASON_BATTCHG_FACTORY      BIT(2)
-static ssize_t at_chg_status_store(struct device *dev,
-		struct device_attribute *attr,
-		const char *buf, size_t count)
-{
-	struct smbchg_chip *chip = dev_get_drvdata(dev);
-	int ret = 0;
-
-	if (!count) {
-		pr_err("[Diag] count 0 error\n");
-		return -EINVAL;
-	}
-
-	if (!chip) {
-		pr_err("called before init\n");
-		return -EINVAL;
-	}
-
-	if (strncmp(buf, "0", 1) == 0) {
-		/* stop charging */
-		pr_info("[Diag] stop charging\n");
-		vote(chip->battchg_suspend_votable,
-			BATTCHG_ATCMD_EN_VOTER, true, 0);
-	} else if (strncmp(buf, "1", 1) == 0) {
-		/* start charging */
-		pr_info("[Diag] start charging\n");
-		vote(chip->battchg_suspend_votable,
-			BATTCHG_ATCMD_EN_VOTER, false, 0);
-	}
-
-	if (ret)
-		return -EINVAL;
-
-	power_supply_changed(&chip->batt_psy);
-
-	return 1;
-}
-
-static ssize_t at_chg_complete_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	struct smbchg_chip *chip = dev_get_drvdata(dev);
-	int gauge_level = 0;
-	int r = 0;
-
-	if (!chip) {
-		pr_err("called before init\n");
-		return -EINVAL;
-	}
-
-	gauge_level = get_prop_batt_capacity(chip);
-
-	if (gauge_level == 100) {
-		r = snprintf(buf, 3, "%d\n", 0);
-		pr_err("[Diag] gauge == 100(%d), buf = %s\n",
-				gauge_level, buf);
-	} else {
-		r = snprintf(buf, 3, "%d\n", 1);
-		pr_err("[Diag] gauge <  100(%d), buf = %s\n",
-				gauge_level, buf);
-	}
-
-	return r;
-}
-
-static ssize_t at_chg_complete_store(struct device *dev,
-		struct device_attribute *attr,
-		const char *buf, size_t count)
-{
-	struct smbchg_chip *chip = dev_get_drvdata(dev);
-	int ret = 0;
-
-	if (!count) {
-		pr_err("[Diag] count 0 error\n");
-		return -EINVAL;
-	}
-
-	if (!chip) {
-		pr_err("called before init\n");
-		return -EINVAL;
-	}
-
-	if (strncmp(buf, "0", 1) == 0) {
-		/* charging not complete */
-		pr_info("[Diag] charging not complete start\n");
-		vote(chip->battchg_suspend_votable,
-			BATTCHG_ATCMD_EN_VOTER, true, 0);
-	} else if (strncmp(buf, "1", 1) == 0) {
-		/* charging complete */
-		pr_info("[Diag] charging complete start\n");
-		vote(chip->battchg_suspend_votable,
-			BATTCHG_ATCMD_EN_VOTER, false, 0);
-	}
-
-	if (ret)
-		return -EINVAL;
-
-	return 1;
-}
-DEVICE_ATTR(at_charge, 0600, at_chg_status_show, at_chg_status_store);
-DEVICE_ATTR(at_chcomp, 0600, at_chg_complete_show, at_chg_complete_store);
-#endif
 
 #define CMD_CHG_LED_REG		0x43
 #define CHG_LED_CTRL_BIT		BIT(0)
@@ -5855,10 +4977,6 @@ static void smbchg_vfloat_adjust_work(struct work_struct *work)
 	delta_vfloat_mv = chip->vfloat_mv - chip->max_vbat_sample;
 	pr_smb(PR_STATUS, "delta_vfloat_mv = %d, samples = %d, mvbat = %d\n",
 		delta_vfloat_mv, chip->n_vbat_samples, chip->max_vbat_sample);
-	/*
-	 * enough valid samples has been collected, adjust trim codes
-	 * based on maximum of collected vbat samples if necessary
-	 */
 	if (delta_vfloat_mv > vf_adjust_high_threshold
 			|| delta_vfloat_mv < -1 * vf_adjust_low_threshold) {
 		rc = smbchg_adjust_vfloat_mv_trim(chip, delta_vfloat_mv);
@@ -5929,10 +5047,6 @@ static int smbchg_set_optimal_charging_mode(struct smbchg_chip *chip, int type)
 
 	return 0;
 }
-#ifdef CONFIG_LGE_PM_WEAK_BATT_PACK
-#define DEFAULT_WEAK_ICL_MA 1000
-#define WEAK_CHG_DET_CNT	3
-#endif
 
 #define DEFAULT_SDP_MA		100
 #define DEFAULT_CDP_MA		1500
@@ -5940,6 +5054,12 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 						enum power_supply_type type)
 {
 	int rc, current_limit_ma;
+#ifdef CONFIG_HTC_BATT_PCN0020
+	int pd_current;
+#endif //CONFIG_HTC_BATT_PCN0020
+#ifdef CONFIG_HTC_BATT_WA_PCN0021
+	struct timespec xtime;
+#endif //CONFIG_HTC_BATT_WA_PCN0021
 
 	/*
 	 * if the type is not unknown, set the type before changing ICL vote
@@ -5949,64 +5069,35 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 	if (type != POWER_SUPPLY_TYPE_UNKNOWN)
 		chip->usb_supply_type = type;
 
-#ifdef CONFIG_LGE_PM
-	/*
-	 * to support usb type-c charger,
-	 * usb type should be ignored when setting ICL
-	 */
-	if (chip->typec_psy) {
-		if (type != POWER_SUPPLY_TYPE_UNKNOWN)
-			chip->cfg_override_usb_current = true;
-		else
-			chip->cfg_override_usb_current = false;
-	}
-#endif
+#ifdef CONFIG_HTC_BATT_WA_PCN0021
+	xtime = ktime_to_timespec(ktime_get());
+	if (xtime.tv_sec > 120)
+		smbchg_default_dcp_icl_ma = 1500;
+#endif //CONFIG_HTC_BATT_WA_PCN0021
 
 	/*
 	 * Type-C only supports STD(900), MEDIUM(1500) and HIGH(3000) current
 	 * modes, skip all BC 1.2 current if external typec is supported.
 	 * Note: for SDP supporting current based on USB notifications.
 	 */
-#ifdef CONFIG_LGE_USB_TYPE_C
-	if (chip->typec_psy && chip->typec_current_ma)
-		current_limit_ma = chip->typec_current_ma;
-#else
 	if (chip->typec_psy && (type != POWER_SUPPLY_TYPE_USB))
 		current_limit_ma = chip->typec_current_ma;
-#endif
+	else if (type == POWER_SUPPLY_TYPE_USB)
+		current_limit_ma = DEFAULT_SDP_MA;
 	else if (type == POWER_SUPPLY_TYPE_USB)
 		current_limit_ma = DEFAULT_SDP_MA;
 	else if (type == POWER_SUPPLY_TYPE_USB_CDP)
 		current_limit_ma = DEFAULT_CDP_MA;
-#ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
-	else if (type == POWER_SUPPLY_TYPE_USB_HVDCP) {
-		if (chip->is_evp_ta)
-			current_limit_ma = smbchg_default_dcp_icl_ma;
-		else
-			current_limit_ma = smbchg_default_hvdcp_icl_ma;
-	}
-#else
 	else if (type == POWER_SUPPLY_TYPE_USB_HVDCP)
 		current_limit_ma = smbchg_default_hvdcp_icl_ma;
-#endif
 	else if (type == POWER_SUPPLY_TYPE_USB_HVDCP_3)
 		current_limit_ma = smbchg_default_hvdcp3_icl_ma;
+#ifdef CONFIG_HTC_BATT_PCN0020
+	else if (htc_battery_get_pd_type(&pd_current))
+		current_limit_ma = pd_current;
+#endif //CONFIG_HTC_BATT_PCN0020
 	else
 		current_limit_ma = smbchg_default_dcp_icl_ma;
-
-#ifdef CONFIG_LGE_PM_FACTORY_CABLE
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-#ifdef CONFIG_LGE_USB_TYPE_C
-	if (!chip->dp_alt_mode && is_factory_cable(chip) && chip->usb_present) {
-#else
-	if (is_factory_cable(chip) && chip->usb_present) {
-#endif
-		pr_smb(PR_LGE, "factory cable.. set to %dmA\n", FACTORY_ICL_MA);
-		current_limit_ma = FACTORY_ICL_MA;
-		chip->cfg_override_usb_current = true;
-	}
-#endif
-#endif
 
 	pr_smb(PR_STATUS, "Type %d: setting mA = %d\n",
 		type, current_limit_ma);
@@ -6017,18 +5108,6 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 		goto out;
 	}
 
-#ifdef CONFIG_LGE_PM
-	/* limit ICL due to the H/W limit (VBUS line witdh) */
-	if (chip->maximum_icl_ma) {
-		rc = vote(chip->usb_icl_votable, HW_ICL_VOTER, true,
-					chip->maximum_icl_ma);
-		if (rc < 0) {
-			pr_err("Couldn't vote for HW Limit USB ICL rc=%d\n", rc);
-			goto out;
-		}
-	}
-#endif
-
 	if (!chip->skip_usb_notification)
 		power_supply_set_supply_type(chip->usb_psy, type);
 
@@ -6037,16 +5116,7 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 	 * and set type after the vote
 	 */
 	if (type == POWER_SUPPLY_TYPE_UNKNOWN) {
-#ifdef CONFIG_LGE_PM
-		if (chip->maximum_icl_ma) {
-			rc = vote(chip->usb_icl_votable, HW_ICL_VOTER, false,
-						chip->maximum_icl_ma);
-			if (rc < 0)
-				pr_err("Couldn't vote for HW ICL rc=%d\n", rc);
-		}
-#endif
-		rc = vote(chip->usb_icl_votable, PSY_ICL_VOTER, false,
-				current_limit_ma);
+		rc = vote(chip->usb_icl_votable, PSY_ICL_VOTER, true, 0);
 		if (rc < 0)
 			pr_err("Couldn't remove ICL vote rc=%d\n", rc);
 
@@ -6061,6 +5131,50 @@ static int smbchg_change_usb_supply_type(struct smbchg_chip *chip,
 out:
 	return rc;
 }
+
+#ifdef CONFIG_HTC_BATT_WA_PCN0021
+#define MISC_TRIM_OPTIONS_7_0		0xF6
+#define MISC_INPUT_MISSING_POLLER_EN_BIT	BIT(3)
+void pmi8996_set_dcp_default(void)
+{
+	int aicl_result, rc;
+
+	if(!the_chip) {
+		pr_err("called before init\n");
+		return;
+	}
+
+	aicl_result = smbchg_get_aicl_level_ma(the_chip);
+
+	if ((smbchg_default_dcp_icl_ma > 1000) ||
+		(aicl_result < 1000)){
+		smbchg_default_dcp_icl_ma = 1500;
+		return;
+	}
+
+	g_is_charger_ability_detected = false;
+	smbchg_default_dcp_icl_ma = 1500;
+	vote(the_chip->usb_icl_votable, PSY_ICL_VOTER, true,
+				smbchg_default_dcp_icl_ma);
+	pr_smb(PR_STATUS, "set to default dcp current.\n");
+
+	msleep(300);
+	if (g_is_hvdcp_detect_done){
+		/*Disable HW AICL to apply SW AICL*/
+		set_aicl_enable(false);
+		/*Disable Input Missing Poller befoer 5V2A detection*/
+		rc = smbchg_sec_masked_write(the_chip,
+			the_chip->misc_base + MISC_TRIM_OPTIONS_7_0,
+			MISC_INPUT_MISSING_POLLER_EN_BIT, 0);
+		if (rc < 0)
+			pr_err("Couldn't disable input missing poller rc=%d\n", rc);
+		if (delayed_work_pending(&the_chip->iusb_5v_2a_detect_work))
+			cancel_delayed_work(&the_chip->iusb_5v_2a_detect_work);
+		schedule_delayed_work(&the_chip->iusb_5v_2a_detect_work,
+				msecs_to_jiffies(AICL_5V_2A_DETECT_DELAY_MS));
+	}
+}
+#endif //CONFIG_HTC_BATT_WA_PCN0021
 
 #define HVDCP_ADAPTER_SEL_MASK	SMB_MASK(5, 4)
 #define HVDCP_5V		0x00
@@ -6106,375 +5220,124 @@ static int force_9v_hvdcp(struct smbchg_chip *chip)
 	return rc;
 }
 
-#ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
-static int smbchg_evp_det_start(struct smbchg_chip *chip, int start)
+#ifdef CONFIG_HTC_BATT_WA_PCN0017
+void smbchg_set_hvdcp_enable(struct smbchg_chip *chip, bool en)
 {
-	union power_supply_propval val = {start, };
-	int rc;
+	int rc = 0;
 
-	if (start)
-		pr_smb(PR_LGE, "Start EVP detection\n");
-
-	rc = chip->usb_psy->set_property(chip->usb_psy,
-				POWER_SUPPLY_PROP_EVP_DETECT_START, &val);
-	return rc;
-}
-#endif
-
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-#define HVDCP_PREPARE_MS 500
-#define HVDCP_RETRY_MAX 5
-#define HVDCP_CHECK_MS 2500	/* same as HVDCP_NOTIFY_MS */
-static int rerun_apsd(struct smbchg_chip *chip);
-void update_usb_status(struct smbchg_chip *chip, bool usb_present, bool force);
-
-static void smbchg_hvdcp_det_prepare_work(struct work_struct *work)
-{
-	struct smbchg_chip *chip = container_of(work,
-				struct smbchg_chip,
-				hvdcp_det_prepare_work.work);
-	union power_supply_propval prop = {0, };
-	enum power_supply_type usb_supply_type;
-	char *usb_type_name;
-	int rc;
-
-	pr_smb(PR_LGE, "start prepare hvdcp (%d)\n", chip->hvdcp_det_retry);
-
-	if (!is_usb_present(chip))
-		goto out;
-
-#ifdef CONFIG_LGE_USB_FACTORY
-	if (lge_get_boot_mode() == LGE_BOOT_MODE_QEM_56K ||
-			lge_get_boot_mode() == LGE_BOOT_MODE_QEM_130K ||
-			lge_get_boot_mode() == LGE_BOOT_MODE_QEM_910K) {
-		pr_smb(PR_LGE, "MiniOS boot, enable HVDCP\n");
-		goto prepare_hvdcp_detection;
-	}
-#endif
-
-	/*
-	 * if High Voltage PD Charger exist, faking removal/insertion will fail.
-	 * so bypass HVDCP detection
-	 */
-	get_property_from_typec(chip, POWER_SUPPLY_PROP_VOLTAGE_MAX, &prop);
-	if (prop.intval > 5000) {
-		pr_smb(PR_LGE, "HV PD charger detected. ignore HVDCP\n");
-		goto out;
-	}
-
-	if (chip->hvdcp_uv_recovery) {
-		pr_smb(PR_LGE, "recover under voltage, enable HVDCP\n");
-		goto prepare_hvdcp_detection;
-	}
-
-#ifdef CONFIG_LGE_USB_ANX7688_ADC
-	if (!chip->ctype_rp) {
-		if (chip->hvdcp_det_retry >= HVDCP_RETRY_MAX) {
-			pr_smb(PR_LGE, "invalid voltage on CC, ignore HVDCP\n");
-			goto out;
-		}
-
-		chip->hvdcp_det_retry++;
-		schedule_delayed_work(&chip->hvdcp_det_prepare_work,
-					msecs_to_jiffies(HVDCP_PREPARE_MS));
-		return;
-	}
-#else
-	if (chip->ctype_rp == RP_10K) {
-		pr_smb(PR_LGE, "Rp = %dk, ignore HVDCP\n",
-					chip->ctype_rp);
-		goto out;
-	} else if (chip->ctype_rp == RP_NONE) {
-		if (chip->hvdcp_det_retry >= HVDCP_RETRY_MAX) {
-			pr_smb(PR_LGE, "Rp = %dk, do not enable HVDCP\n",
-						chip->ctype_rp);
-			goto out;
-		}
-		chip->hvdcp_det_retry++;
-		schedule_delayed_work(&chip->hvdcp_det_prepare_work,
-					msecs_to_jiffies(HVDCP_PREPARE_MS));
-		return;
-	}
-#endif
-
-prepare_hvdcp_detection:
-	/* enable HVDCP */
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + CHGPTH_CFG,
+	if (en){
+		if (!(get_kernel_flag() & KERNEL_FLAG_DISABLE_SAFETY_TIMER)
+			&& (chip->htc_wa_flags & HTC_DISABLE_QC2_QC3_WA)) {
+			//Disable QC2.0
+			rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + CHGPTH_CFG,
+				HVDCP_EN_BIT, 0);
+			if (rc < 0) {
+				dev_err(chip->dev, "Couldn't set usb_chgpth cfg disable qc20 rc=%d\n", rc);
+			}
+		} else {
+			//Enable QC2.0
+			rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + CHGPTH_CFG,
 				HVDCP_EN_BIT, HVDCP_EN_BIT);
-	if (rc < 0)
-		pr_err("Couldn't enable HVDCP rc=%d\n", rc);
-
-	pr_smb(PR_MISC, "Disable AICL\n");
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + USB_AICL_CFG,
-				AICL_EN_BIT, 0);
-	if (rc < 0)
-		pr_err("Couldn't disable AICL rc=%d\n", rc);
-
-	rc = rerun_apsd(chip);
-	if (rc) {
-		pr_err("rerun apsd failed rc = %d\n", rc);
-		goto handle_removal;
-	}
-
-	read_usb_type(chip, &usb_type_name, &usb_supply_type);
-	if (usb_supply_type != POWER_SUPPLY_TYPE_USB_DCP) {
-		rc = rerun_apsd(chip);
-		if (rc) {
-			pr_err("rerun apsd failed rc = %d\n", rc);
-			goto handle_removal;
-		}
-
-		read_usb_type(chip, &usb_type_name, &usb_supply_type);
-		if (usb_supply_type != POWER_SUPPLY_TYPE_USB_DCP) {
-			pr_smb(PR_LGE, "final inserted type = %d (%s)\n",
-					usb_supply_type, usb_type_name);
-
-			prop.intval = 0;
-			chip->usb_psy->set_property(chip->usb_psy,
-				POWER_SUPPLY_PROP_APSD_RERUN_NEED, &prop);
-
-			smbchg_change_usb_supply_type(chip, usb_supply_type);
-		}
-	}
-
-	pr_smb(PR_MISC, "Enable AICL\n");
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + USB_AICL_CFG,
-				AICL_EN_BIT, AICL_EN_BIT);
-	if (rc < 0)
-		pr_err("Couldn't enable AICL rc=%d\n", rc);
-
-	if (usb_supply_type != POWER_SUPPLY_TYPE_USB_DCP)
-		return;
-
-	cancel_delayed_work_sync(&chip->hvdcp_det_work);
-	schedule_delayed_work(&chip->hvdcp_det_work,
-				msecs_to_jiffies(HVDCP_CHECK_MS));
-	return;
-
-handle_removal:
-	update_usb_status(chip, 0, 0);
-out:
-	chip->hvdcp_det_retry = 0;
-	chip->hvdcp_uv_recovery = false;
-	smbchg_relax(chip, PM_DETECT_HVDCP);
-}
-#endif
-
-#ifdef CONFIG_LGE_PM
-#define HVDCP_RECOVERY_MS (60 * 1000)
-#define HVDCP_RECOVERY_UV_COUNT 2
-#define HVDCP_RECOVERY_MV 5200
-static bool is_usbin_uv_high(struct smbchg_chip *chip);
-static int fake_insertion_removal_for_uv(
-	struct smbchg_chip *chip, bool insertion);
-static void smbchg_hvdcp_recovery_work(struct work_struct *work)
-{
-	struct smbchg_chip *chip = container_of(work,
-				struct smbchg_chip,
-				hvdcp_recovery_work.work);
-	enum power_supply_type usb_supply_type;
-	char *usb_type_name;
-	int usbin_vol;
-	int rc;
-
-	if (lge_get_boot_mode() == LGE_BOOT_MODE_CHARGERLOGO)
-		return;
-
-	if (!chip->usb_present)
-		goto out;
-
-	if (chip->usb_supply_type != POWER_SUPPLY_TYPE_USB_HVDCP &&
-			chip->usb_supply_type != POWER_SUPPLY_TYPE_USB_HVDCP_3)
-		goto out;
-
-	usbin_vol = get_usb_adc(chip);
-	if (usbin_vol > HVDCP_RECOVERY_MV) {
-		schedule_delayed_work(&chip->hvdcp_recovery_work,
-				msecs_to_jiffies(HVDCP_RECOVERY_MS));
-		goto out;
-	}
-
-	chip->hvdcp_uv_count++;
-	pr_smb(PR_LGE, "check recover hvdcp (%d). voltage = %dmV\n",
-			chip->hvdcp_uv_count, usbin_vol);
-
-	if (chip->hvdcp_uv_count < HVDCP_RECOVERY_UV_COUNT) {
-		schedule_delayed_work(&chip->hvdcp_recovery_work,
-				msecs_to_jiffies(HVDCP_RECOVERY_MS));
-		return;
-	}
-
-	pr_smb(PR_LGE, "start recover hvdcp\n");
-
-	chip->hvdcp_uv_recovery = true;
-
-	rc = fake_insertion_removal_for_uv(chip, false);
-	msleep(500);
-	rc = fake_insertion_removal_for_uv(chip, true);
-
-	if (rc) {
-		pr_smb(PR_LGE, "error during fake insertion removal\n");
-		chip->hvdcp_uv_recovery = false;
-		goto out;
-	}
-
-	read_usb_type(chip, &usb_type_name, &usb_supply_type);
-	if (usb_supply_type != POWER_SUPPLY_TYPE_USB_DCP) {
-		pr_smb(PR_LGE, "error during recovery. inserted type = %d (%s)\n",
-				usb_supply_type, usb_type_name);
-		chip->hvdcp_uv_recovery = false;
-	}
-out:
-	chip->hvdcp_uv_count = 0;
-}
-#endif
-
-#ifdef CONFIG_LGE_PM_VFLOAT_TRIM_RESTORE
-#define VFLOAT_TRIM_RECHECK_DELAY_MS	1000
-#define FULL_CHARGED_CAPACITY		100
-#define FULL_BATTERY_MIN_VOLTAGE	4350
-
-static void smbchg_vfloat_trim_check_ok(struct smbchg_chip *chip)
-{
-
-	if (!chip->usb_present)
-		return;
-
-#ifdef CONFIG_LGE_PM_FACTORY_CABLE
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	if (is_factory_cable(chip))
-		return;
-#endif
-#endif
-
-	if (chip->vfloat_trim_restore_status){
-		pr_smb(PR_STATUS, "VFLOAT_TRIM restored recharge finish. \n");
-		chip->vfloat_trim_restore_status = false;
-		smbchg_relax(chip, PM_VFLOAT_TRIM_RECHARGE);
-		return;
-	}
-
-	smbchg_stay_awake(chip, PM_VFLOAT_TRIM_RESTORE);
-	schedule_delayed_work(&chip->vfloat_trim_check_work, 0);
-}
-
-
-static void smbchg_vfloat_trim_check_work(struct work_struct *work)
-{
-	struct smbchg_chip *chip = container_of(work,
-				struct smbchg_chip,
-				vfloat_trim_check_work.work);
-	int vbat_uv, vbat_mv, capacity, rc;
-	u8 vfloat_trim_reg;
-
-	rc = get_property_from_fg(chip,
-			POWER_SUPPLY_PROP_CAPACITY, &capacity);
-	if (rc) {
-		pr_smb(PR_STATUS,
-			"bms psy does not support capacity rc = %d\n", rc);
-		goto reschedule;
-	}
-
-	if (capacity == FULL_CHARGED_CAPACITY ) {
-		pr_smb(PR_STATUS, "Skip, SOC (%d) is Full. \n", capacity);
-		goto out;
-	}
-
-	rc = get_property_from_fg(chip,
-			POWER_SUPPLY_PROP_VOLTAGE_NOW, &vbat_uv);
-	if (rc) {
-		pr_smb(PR_STATUS,
-			"bms psy does not support voltage rc = %d\n", rc);
-		goto reschedule;
-	}
-	vbat_mv = vbat_uv / 1000;
-
-	/* compare with initail VFLOAT_TRIM register */
-	rc = smbchg_read(chip, &vfloat_trim_reg, chip->misc_base + TRIM_14, 1);
-	if (rc < 0){
-		dev_err(chip->dev, "Unable to read trim 14: %d\n", rc);
-		goto reschedule;
-	}
-
-	if( (capacity < FULL_CHARGED_CAPACITY) &&
-			(vbat_mv < FULL_BATTERY_MIN_VOLTAGE ) &&
-			(vfloat_trim_reg != chip->initial_vfloat_trim_reg) ){
-		pr_smb(PR_STATUS, "Restore VFLOAT_TRIM register.\n");
-		pr_smb(PR_STATUS, "SOC = %d VBAT = %d mV vfloat_trim_reg %x\n",
-			capacity, vbat_mv, vfloat_trim_reg);
-		goto restore;
-	}else {
-		pr_smb(PR_STATUS, "Not restored. SOC %d VBAT %d trim_reg %x\n",
-			capacity, vbat_mv, vfloat_trim_reg);
-		goto out;
-		}
-
-restore:
-	pr_smb(PR_STATUS, "start recover VFLOAT_TRIM & recharging \n");
-
-	rc = smbchg_sec_masked_write(chip, chip->misc_base + TRIM_14,
-				VF_TRIM_MASK, chip->initial_vfloat_trim_reg);
-	if (rc < 0) {
-		dev_err(chip->dev,
-			"Couldn't change vfloat trim rc=%d\n", rc);
-		goto reschedule;
-	}
-	pr_smb(PR_STATUS, "VFlt trim restored. 0x%02x \n",
-		chip->initial_vfloat_trim_reg);
-
-	rc = vote(chip->battchg_suspend_votable, BATTCHG_VFLT_TRIM_EN_VOTER, true, 0);
-	msleep(500);
-	rc = vote(chip->battchg_suspend_votable,
-		BATTCHG_VFLT_TRIM_EN_VOTER, false, 0);
-
-	if (rc < 0) {
-		pr_smb(PR_STATUS, "error during restart charging.\n");
-		goto reschedule;
-	}
-
-	smbchg_stay_awake(chip, PM_VFLOAT_TRIM_RECHARGE);
-	chip->vfloat_trim_restore_status = true;
-
-	if (chip->psy_registered) {
-		if (!chip->enable_aicl_wake) {
-			pr_smb(PR_STATUS, "enable aicl_done_irq\n");
-			enable_irq_wake(chip->aicl_done_irq);
-			chip->enable_aicl_wake = true;
+			if (rc < 0) {
+				dev_err(chip->dev, "Couldn't set usb_chgpth cfg disable qc20 rc=%d\n", rc);
+			}
 		}
 	} else {
-		pr_smb(PR_STATUS, "smbchg irqs are not registered\n");
+		//Disable QC2.0
+		rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + CHGPTH_CFG,
+			HVDCP_EN_BIT, 0);
+		if (rc < 0) {
+			dev_err(chip->dev, "Couldn't set usb_chgpth cfg disable qc20 rc=%d\n", rc);
+		}
 	}
-	smbchg_parallel_usb_check_ok(chip);
-	if (chip->psy_registered)
-		power_supply_changed(&chip->batt_psy);
-	smbchg_charging_status_change(chip);
-
-out:
-	pr_smb(PR_STATUS, "End of vfloat trim check. \n");
-	smbchg_relax(chip, PM_VFLOAT_TRIM_RESTORE);
-	return;
-
-reschedule:
-	pr_smb(PR_STATUS, "Rescheduled vfloat trim check. \n");
-	schedule_delayed_work(&chip->vfloat_trim_check_work,
-			msecs_to_jiffies(VFLOAT_TRIM_RECHECK_DELAY_MS));
-
 }
-#endif
+
+extern int workable_charging_cable(void);
+#define CHK_CABLE_WORKABLE_DELAY_MS	100
+#define CHK_CABLE_WORKABLE_CNT		10
+#define CHK_CABLE_HVDCP_NOTIFY_MS	2500
+static void smbchg_chk_cable_workable_work(struct work_struct *work)
+{
+	unsigned int 		cnt = 0;
+	static unsigned int		s_re_chk_cnt = 0;
+	bool	hvdcp_en = true;
+	enum power_supply_type usb_supply_type;
+	char *usb_type_name = "null";
+
+	while (!the_chip) {
+		if (cnt < 10) {
+			msleep(500);
+			cnt++;
+			continue;
+		}
+		pr_err("called before init\n");
+		return;
+	}
+
+	cancel_delayed_work_sync(&the_chip->hvdcp_det_work);
+
+	cnt = 0;
+	while(cnt++ < 60){
+		read_usb_type(the_chip, &usb_type_name, &usb_supply_type);
+		if(usb_supply_type != POWER_SUPPLY_TYPE_USB_DCP) {
+			s_re_chk_cnt = 0;
+			return;
+		}
+		g_typec_workable = workable_charging_cable();
+		switch(g_typec_workable){
+			case 2:
+				msleep(CHK_CABLE_WORKABLE_DELAY_MS * 10);
+				hvdcp_en = false;
+				break;
+			case 1:
+				msleep(CHK_CABLE_WORKABLE_DELAY_MS);
+				hvdcp_en = true;
+				if(cnt < 50)
+					cnt = 50;
+				break;
+			default:
+				hvdcp_en = false;
+				cnt = 70;
+				break;
+		}
+	}
+
+	pr_smb(PR_STATUS, "set hvdcp %d\n", hvdcp_en);
+	smbchg_set_hvdcp_enable(the_chip, hvdcp_en);
+	if (hvdcp_en){
+		set_aicl_enable(false);
+		pmi8994_rerun_apsd();
+		set_aicl_enable(true);
+	}
+
+	read_usb_type(the_chip, &usb_type_name, &usb_supply_type);
+	if ((g_typec_workable == -1) && (s_re_chk_cnt < 3) &&
+			(usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP)) {
+		schedule_delayed_work(&the_chip->chk_cable_workable_work,
+					msecs_to_jiffies(CHK_CABLE_HVDCP_NOTIFY_MS));
+		s_re_chk_cnt ++;
+		pr_smb(PR_STATUS, "recheck cable workable: %d\n", s_re_chk_cnt);
+	} else {
+		if (!the_chip->hvdcp_not_supported &&
+				(usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP)) {
+			schedule_delayed_work(&the_chip->hvdcp_det_work,
+						msecs_to_jiffies(CHK_CABLE_HVDCP_NOTIFY_MS));
+		}
+		s_re_chk_cnt = 0;
+	}
+}
+#endif //CONFIG_HTC_BATT_WA_PCN0017
+
+#if defined(CONFIG_HTC_BATT_PCN0015)||defined(CONFIG_HTC_BATT_WA_PCN0010)
+#define TRIM_OPTIONS_7_0		0xF6
+#define INPUT_MISSING_POLLER_EN_BIT	BIT(3)
+#endif //CONFIG_HTC_BATT_PCN0015/CONFIG_HTC_BATT_WA_PCN0010
 static void smbchg_hvdcp_det_work(struct work_struct *work)
 {
 	struct smbchg_chip *chip = container_of(work,
 				struct smbchg_chip,
 				hvdcp_det_work.work);
-	int rc;
-
-#ifdef CONFIG_LGE_PM
-	pr_smb(PR_LGE, "start detect hvdcp\n");
-#endif
-
+	int rc = 0;
 	if (is_hvdcp_present(chip)) {
 		if (!chip->hvdcp3_supported &&
 			(chip->wa_flags & SMBCHG_HVDCP_9V_EN_WA)) {
@@ -6484,33 +5347,32 @@ static void smbchg_hvdcp_det_work(struct work_struct *work)
 				pr_err("could not force 9V HVDCP continuing rc=%d\n",
 						rc);
 		}
-#ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
-		smbchg_evp_det_start(chip, false);
-#endif
+		pr_smb(PR_STATUS, "setting usb psy type = %d\n",
+				POWER_SUPPLY_TYPE_USB_HVDCP);
 		smbchg_change_usb_supply_type(chip,
 				POWER_SUPPLY_TYPE_USB_HVDCP);
 		if (chip->psy_registered)
 			power_supply_changed(&chip->batt_psy);
 		smbchg_aicl_deglitch_wa_check(chip);
-#ifdef CONFIG_LGE_PM
-		cancel_delayed_work(&chip->hvdcp_recovery_work);
-		schedule_delayed_work(&chip->hvdcp_recovery_work,
-				msecs_to_jiffies(HVDCP_RECOVERY_MS));
-#endif
-#ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
-	} else if (is_usb_present(chip)) {
-#ifdef CONFIG_LGE_USB_TYPE_C
-		if (!chip->typec_psy)
-			chip->typec_psy = power_supply_get_by_name("usb_pd");
-		if (chip->typec_psy) {
-			union power_supply_propval prop = {0, };
-			get_property_from_typec(chip, POWER_SUPPLY_PROP_TYPE, &prop);
-			if (prop.intval != POWER_SUPPLY_TYPE_CTYPE_PD)
-				smbchg_evp_det_start(chip, true);
-		} else
-#endif
-		smbchg_evp_det_start(chip, true);
-#endif
+#ifdef CONFIG_HTC_BATT_PCN0015
+		g_is_hvdcp_detect_done = true;
+	} else {
+		if (!g_is_charger_ability_detected){
+			/*Disable HW AICL to apply SW AICL*/
+			set_aicl_enable(false);
+			/*Disable Input Missing Poller befoer 5V2A detection*/
+			rc = smbchg_sec_masked_write(chip,
+				chip->misc_base + TRIM_OPTIONS_7_0,
+				INPUT_MISSING_POLLER_EN_BIT, 0);
+			if (rc < 0)
+				pr_err("Couldn't disable input missing poller rc=%d\n", rc);
+			if (delayed_work_pending(&chip->iusb_5v_2a_detect_work))
+				cancel_delayed_work(&chip->iusb_5v_2a_detect_work);
+			schedule_delayed_work(&chip->iusb_5v_2a_detect_work,
+					msecs_to_jiffies(AICL_5V_2A_DETECT_DELAY_MS));
+		}
+		g_is_hvdcp_detect_done = true;
+#endif //CONFIG_HTC_BATT_PCN0015
 	}
 	smbchg_relax(chip, PM_DETECT_HVDCP);
 }
@@ -6541,6 +5403,16 @@ static int set_usb_psy_dp_dm(struct smbchg_chip *chip, int state)
 static void restore_from_hvdcp_detection(struct smbchg_chip *chip)
 {
 	int rc;
+#ifdef CONFIG_HTC_BATT_WA_PCN0002
+        if (!(get_kernel_flag() & KERNEL_FLAG_DISABLE_SAFETY_TIMER)
+                && (chip->htc_wa_flags & HTC_DISABLE_QC2_QC3_WA)) {
+		return;
+	}
+#endif //CONFIG_HTC_BATT_WA_PCN0002
+	pr_smb(PR_MISC, "Retracting HVDCP vote for ICL\n");
+	rc = vote(chip->usb_icl_votable, HVDCP_ICL_VOTER, false, 0);
+	if (rc < 0)
+		pr_err("Couldn't retract HVDCP ICL vote rc=%d\n", rc);
 
 	/* switch to 9V HVDCP */
 	rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + CHGPTH_CFG,
@@ -6548,22 +5420,10 @@ static void restore_from_hvdcp_detection(struct smbchg_chip *chip)
 	if (rc < 0)
 		pr_err("Couldn't configure HVDCP 9V rc=%d\n", rc);
 
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-	/* enable / disable HVDCP */
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + CHGPTH_CFG,
-				HVDCP_EN_BIT, chip->usb_present ? HVDCP_EN_BIT : 0);
-	if (rc < 0)
-		pr_err("Couldn't %s HVDCP rc=%d\n",
-			chip->usb_present ? "enable" : "disable", rc);
-#else
 	/* enable HVDCP */
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + CHGPTH_CFG,
-				HVDCP_EN_BIT, HVDCP_EN_BIT);
+	rc = vote(chip->hvdcp_enable_votable, HVDCP_PULSING_VOTER, false, 1);
 	if (rc < 0)
 		pr_err("Couldn't enable HVDCP rc=%d\n", rc);
-#endif
 
 	/* enable APSD */
 	rc = smbchg_sec_masked_write(chip,
@@ -6575,11 +5435,7 @@ static void restore_from_hvdcp_detection(struct smbchg_chip *chip)
 	/* Reset back to 5V unregulated */
 	rc = smbchg_sec_masked_write(chip,
 		chip->usb_chgpth_base + USBIN_CHGR_CFG,
-#ifdef CONFIG_LGE_PM
-		ADAPTER_ALLOWANCE_MASK, USBIN_ADAPTER_5V_9V_CONT);
-#else
 		ADAPTER_ALLOWANCE_MASK, USBIN_ADAPTER_5V_UNREGULATED_9V);
-#endif
 	if (rc < 0)
 		pr_err("Couldn't write usb allowance rc=%d\n", rc);
 
@@ -6604,6 +5460,186 @@ static void restore_from_hvdcp_detection(struct smbchg_chip *chip)
 	if (rc < 0)
 		pr_err("Couldn't retract HVDCP ICL vote rc=%d\n", rc);
 }
+
+#ifdef CONFIG_HTC_BATT
+#ifdef CONFIG_HTC_BATT_WA_PCN0008
+#define INTERVAL_1_MINUTE_MS	60000
+static void smbchg_usb_limit_max_current_work(struct work_struct *work)
+{
+	if(!the_chip) {
+		pr_err("called before init\n");
+		return;
+	}
+
+	pr_smb(PR_STATUS, "USB max current changed to %d\n",
+		USB_MA_1500);
+	vote(the_chip->usb_icl_votable, PSY_ICL_VOTER, true,
+		USB_MA_1500);
+}
+#endif //CONFIG_HTC_BATT_WA_PCN0008
+#ifdef CONFIG_HTC_BATT_WA_PCN0011
+static void smbchg_rerun_apsd_worker(struct work_struct *work)
+{
+	if(!the_chip) {
+		pr_err("called before init\n");
+		return;
+	}
+
+	if (the_chip->usb_supply_type != POWER_SUPPLY_TYPE_USB_HVDCP) {
+		pr_smb(PR_STATUS, "Abort RERUN APSD. usb type: %d\n", the_chip->usb_supply_type);
+		return;
+	}
+
+	pr_smb(PR_STATUS, "RERUN APSD\n");
+	pmi8994_rerun_apsd();
+	return;
+}
+#endif //CONFIG_HTC_BATT_WA_PCN0011
+
+#ifdef CONFIG_HTC_BATT_PCN0015
+#define FV_AICL_STS_BIT BIT(6)
+static bool is_smbchg_hard_limit(struct smbchg_chip *chip)
+{
+	int rc = 0;
+	u8 reg = 0;
+
+	rc = smbchg_read(chip, &reg,
+				chip->chgr_base + FV_STS, 1);
+	if (rc)
+		pr_err("Failed to read FV state rc=%d\n", rc);
+
+	pr_smb(PR_MISC, "FV status = %02x, Hard Limit = %d\n", reg, ((reg & FV_AICL_STS_BIT)!=0));
+	if ((reg & FV_AICL_STS_BIT) == 0)
+		return false;
+	else
+		return true;
+}
+
+#define SMBCHG_VIN_MIN_MV 4400
+#define SMBCHG_5V2A_VBATT_MV 180
+static void smbchg_downgrade_iusb_work(struct work_struct *work)
+{
+	int current_aicl;
+	int downgrade_index, target_index;
+	int vbus = 0, rc = 0;
+	bool hard_limit = false;
+	struct smbchg_chip *chip = the_chip;
+
+	if(!the_chip) {
+		pr_err("called before init\n");
+		return;
+	} else {
+		current_aicl = smbchg_get_aicl_level_ma(chip);
+		hard_limit = is_smbchg_hard_limit(chip);
+		vbus = pmi8994_get_usbin_voltage_now();
+	}
+
+	/*Downgrade iusb step by step*/
+	downgrade_index = find_smaller_in_array(
+			chip->tables.usb_ilim_ma_table,
+			current_aicl,
+			chip->tables.usb_ilim_ma_len) - 1;
+	target_index = find_smaller_in_array(
+			chip->tables.usb_ilim_ma_table,
+			USB_MA_1500,
+			chip->tables.usb_ilim_ma_len);
+
+	if (downgrade_index >= target_index){
+		pr_smb(PR_STATUS, "Set iusb=%dmA, target=%dmA, "
+		"current_aicl=%dmA, vbus=%duV, hard_limit=%d\n",
+			chip->tables.usb_ilim_ma_table[downgrade_index],
+			chip->tables.usb_ilim_ma_table[target_index],
+			current_aicl, vbus, hard_limit);
+		vote(chip->usb_icl_votable, PSY_ICL_VOTER, true,
+			chip->tables.usb_ilim_ma_table[downgrade_index]);
+		schedule_delayed_work(&chip->downgrade_iusb_work,
+				msecs_to_jiffies(AICL_DOWNGRADE_IUSB_DELAY_MS));
+		return;
+	} else {
+		pr_smb(PR_STATUS, "Downgrade to 1.5A done, "
+			"current_aicl=%dmA, vbus=%duV, hard_limit=%d\n",
+			current_aicl, vbus, hard_limit);
+		/*Enable Input Missing Poller after 5V2A detection*/
+		rc = smbchg_sec_masked_write(chip,
+			chip->misc_base + TRIM_OPTIONS_7_0,
+			INPUT_MISSING_POLLER_EN_BIT, INPUT_MISSING_POLLER_EN_BIT);
+		if (rc < 0)
+			pr_err("Couldn't enable input missing poller rc=%d\n", rc);
+		/*Enable HW AICL to run 1.5A again*/
+		set_aicl_enable(true);
+	}
+}
+
+static void smbchg_iusb_5v_2a_detect_work(struct work_struct *work)
+{
+	int upgrade_index, target_index;
+	int rc = 0, current_aicl = 0, vbat_mv = 0, vbus = 0;
+	bool hard_limit = false;
+	struct smbchg_chip *chip = the_chip;
+
+	if(!the_chip) {
+		pr_err("called before init\n");
+		return;
+	} else {
+		current_aicl = smbchg_get_aicl_level_ma(chip);
+		vbat_mv = get_prop_batt_voltage_now(chip)/1000;
+		vbus = pmi8994_get_usbin_voltage_now()/1000;
+		hard_limit = is_smbchg_hard_limit(chip);
+	}
+
+	if (g_is_charger_ability_detected)
+		return;
+
+	/*Upgrade iusb step by step*/
+	upgrade_index = find_smaller_in_array(
+			chip->tables.usb_ilim_ma_table,
+			current_aicl,
+			chip->tables.usb_ilim_ma_len) + 1;
+	target_index = find_smaller_in_array(
+			chip->tables.usb_ilim_ma_table,
+			USB_MA_2000,
+			chip->tables.usb_ilim_ma_len);
+
+	if (!hard_limit || vbus < (SMBCHG_VIN_MIN_MV + 50) ||
+			vbus < (vbat_mv + SMBCHG_5V2A_VBATT_MV)) {
+		g_is_5v_2a_detected = true;
+		g_is_charger_ability_detected = true;
+		if (delayed_work_pending(&chip->downgrade_iusb_work))
+			cancel_delayed_work_sync(&chip->downgrade_iusb_work);
+		schedule_delayed_work(&chip->downgrade_iusb_work, 0);
+		return;
+	}
+
+	if (upgrade_index <= target_index){
+		pr_smb(PR_STATUS, "Set iusb=%dmA, target=%dmA, "
+			"current_aicl=%dmA, vbatt=%dmV, vbus=%duV, hard_limit=%d\n",
+			chip->tables.usb_ilim_ma_table[upgrade_index],
+			chip->tables.usb_ilim_ma_table[target_index],
+			current_aicl, vbat_mv, vbus, hard_limit);
+		vote(chip->usb_icl_votable, PSY_ICL_VOTER, true,
+			chip->tables.usb_ilim_ma_table[upgrade_index]);
+		schedule_delayed_work(&chip->iusb_5v_2a_detect_work,
+				msecs_to_jiffies(AICL_5V_2A_DETECT_DELAY_MS));
+		return;
+	} else {
+		/*5V/2A Adapter is detected*/
+		g_is_5v_2a_detected = true;
+		g_is_charger_ability_detected = true;
+		pr_smb(PR_STATUS, "Upgrade to 2A done, "
+			"current_aicl=%dmA, vbatt=%dmV, vbus=%duV, hard_limit=%d\n\n",
+		current_aicl, vbat_mv, vbus, hard_limit);
+		/*Enable Input Missing Poller after 5V2A detection*/
+		rc = smbchg_sec_masked_write(chip,
+			chip->misc_base + TRIM_OPTIONS_7_0,
+			INPUT_MISSING_POLLER_EN_BIT, INPUT_MISSING_POLLER_EN_BIT);
+		if (rc < 0)
+			pr_err("Couldn't enable input missing poller rc=%d\n", rc);
+		/*Enable HW AICL to run 2A again*/
+		set_aicl_enable(true);
+	}
+}
+#endif //CONFIG_HTC_BATT_PCN0015
+#endif /* CONFIG_HTC_BATT */
 
 #define RESTRICTED_CHG_FCC_PERCENT	50
 static int smbchg_restricted_charging(struct smbchg_chip *chip, bool enable)
@@ -6630,63 +5666,33 @@ static int smbchg_restricted_charging(struct smbchg_chip *chip, bool enable)
 	return rc;
 }
 
-#ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
-static void enable_evp_chg_work(struct work_struct *work)
-{
-	struct smbchg_chip *chip = container_of(work,
-			struct smbchg_chip, enable_evp_chg_work.work);
-
-	if (chip->is_evp_ta) {
-		power_supply_set_supply_type(chip->usb_psy,
-				POWER_SUPPLY_TYPE_USB_HVDCP);
-		smbchg_aicl_deglitch_wa_check(chip);
-	} else {
-#ifdef CONFIG_LGE_PM_HVDCP_VDD_CX_VOTE
-		/* VOTE VDD_CX to HVDCP_VDD_CX_MIN for normal DCP */
-		rc = regulator_set_voltage(chip->vddcx,
-				HVDCP_VDD_CX_MIN, HVDCP_VDD_CX_MAX);
-		if (rc)
-			dev_err(chip->dev, "vddcx set level HVDCP_VDD_CX_MIN "
-					"for normal DCP failed\n");
-#endif
-#ifdef CONFIG_LGE_PM_HVDCP_WAKELOCK
-		if (wake_lock_active(&chip->hvdcp_lock)) {
-			mdelay(300);
-			wake_unlock(&chip->hvdcp_lock);
-		}
-#endif
-	}
-}
-#endif
-
-#ifdef CONFIG_LGE_PM_WEAK_BATT_PACK
-static void weak_batt_pack_check_work(struct work_struct *work)
-{
-	struct smbchg_chip *chip = container_of(work,
-			struct smbchg_chip, batt_pack_check_work.work);
-	int rc;
-
-	if (is_usb_present(chip)) {
-		chip->batt_pack_verify_cnt++;
-		pr_smb(PR_LGE, "weak battery pack is detected, count = %d\n",
-				chip->batt_pack_verify_cnt);
-		if (chip->batt_pack_verify_cnt >= WEAK_CHG_DET_CNT
-				&& is_usb_present(chip)) {
-			pr_smb(PR_LGE, "weak batt pack detected, set ICL to 1A\n");
-			rc = vote(chip->usb_icl_votable,
-					PSY_ICL_VOTER, true, DEFAULT_WEAK_ICL_MA);
-		}
-	} else {
-		pr_smb(PR_LGE, "usb is removed. reset count\n");
-		chip->batt_pack_verify_cnt = 1;
-	}
-}
-#endif
-
 static void handle_usb_removal(struct smbchg_chip *chip)
 {
 	struct power_supply *parallel_psy = get_parallel_psy(chip);
 	int rc;
+#ifdef CONFIG_HTC_BATT_WA_PCN0017
+	int vbus_mv;
+#endif //CONFIG_HTC_BATT_WA_PCN0017
+
+#ifdef CONFIG_HTC_BATT_WA_PCN0011
+	if (!strcmp(htc_get_bootmode(),"offmode_charging") ||
+		(chip->usb_supply_type != POWER_SUPPLY_TYPE_USB)){
+		if (g_rerun_apsd_ignore_uv){
+#ifdef CONFIG_HTC_BATT_WA_PCN0017
+			vbus_mv = pmi8994_get_usbin_voltage_now()/1000;
+			pr_smb(PR_STATUS, "vbus = %dmv\n", vbus_mv);
+			if (vbus_mv >= 4250){
+				pr_smb(PR_STATUS, "Ignore removal for rerun APSD!!\n");
+				g_is_charger_ability_detected = false;
+				return;
+			}
+#else
+			pr_smb(PR_STATUS, "Ignore removal for rerun APSD!!\n");
+			return;
+#endif //CONFIG_HTC_BATT_WA_PCN0017
+		}
+	}
+#endif //CONFIG_HTC_BATT_WA_PCN0011
 
 	pr_smb(PR_STATUS, "triggered\n");
 	smbchg_aicl_deglitch_wa_check(chip);
@@ -6698,32 +5704,11 @@ static void handle_usb_removal(struct smbchg_chip *chip)
 		chip->typec_current_ma = 0;
 	/* cancel/wait for hvdcp pending work if any */
 	cancel_delayed_work_sync(&chip->hvdcp_det_work);
-#ifdef CONFIG_LGE_PM
-	smbchg_relax(chip, PM_DETECT_HVDCP);
-#endif
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-	cancel_delayed_work_sync(&chip->battchg_protect_work);
-#endif
 	smbchg_change_usb_supply_type(chip, POWER_SUPPLY_TYPE_UNKNOWN);
 	if (!chip->skip_usb_notification) {
 		pr_smb(PR_MISC, "setting usb psy present = %d\n",
 				chip->usb_present);
-#ifdef CONFIG_LGE_USB_TYPE_C
-		if (!chip->typec_psy) {
-			chip->typec_psy = power_supply_get_by_name("usb_pd");
-			if (IS_ERR(chip->typec_psy))
-				chip->typec_psy = 0;
-		}
-		if (!chip->typec_psy) {
-			power_supply_set_present(chip->usb_psy, chip->usb_present);
-		} else {
-			power_supply_set_supply_type(chip->typec_psy,
-					POWER_SUPPLY_TYPE_UNKNOWN);
-			power_supply_set_present(chip->typec_psy, 0);
-		}
-#else
 		power_supply_set_present(chip->usb_psy, chip->usb_present);
-#endif
 	}
 	set_usb_psy_dp_dm(chip, POWER_SUPPLY_DP_DM_DPR_DMR);
 	schedule_work(&chip->usb_set_online_work);
@@ -6734,9 +5719,6 @@ static void handle_usb_removal(struct smbchg_chip *chip)
 		pr_smb(PR_STATUS,
 			"usb psy does not allow updating prop %d rc = %d\n",
 			POWER_SUPPLY_HEALTH_UNKNOWN, rc);
-#ifdef CONFIG_LGE_PM_BATT_MANAGER
-	set_property_on_bm(chip, POWER_SUPPLY_PROP_BATTERY_CHARGING_ENABLED, 0);
-#endif
 
 	if (parallel_psy && chip->parallel_charger_detected)
 		power_supply_set_present(parallel_psy, false);
@@ -6747,26 +5729,6 @@ static void handle_usb_removal(struct smbchg_chip *chip)
 	}
 	chip->parallel.enabled_once = false;
 	chip->vbat_above_headroom = false;
-#ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
-	chip->is_evp_ta = 0;
-#endif
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-	chip->hvdcp_det_retry = 0;
-#endif
-#ifdef CONFIG_LGE_PM
-	chip->hvdcp_uv_count = 0;
-#endif
-#ifdef CONFIG_LGE_PM_VFLOAT_TRIM_RESTORE
-	if (chip->vfloat_trim_restore_status){
-		pr_smb(PR_STATUS, "VFLOAT_TRIM wakelock released. \n");
-		chip->vfloat_trim_restore_status = false;
-		smbchg_relax(chip, PM_VFLOAT_TRIM_RECHARGE);
-	}
-#endif
-#ifdef CONFIG_LGE_PM_WEAK_BATT_PACK
-	schedule_delayed_work(&chip->batt_pack_check_work,
-		msecs_to_jiffies(800));
-#endif
 	rc = smbchg_masked_write(chip, chip->usb_chgpth_base + CMD_IL,
 			ICL_OVERRIDE_BIT, 0);
 	if (rc < 0)
@@ -6775,14 +5737,52 @@ static void handle_usb_removal(struct smbchg_chip *chip)
 	vote(chip->usb_icl_votable, WEAK_CHARGER_ICL_VOTER, false, 0);
 	chip->usb_icl_delta = 0;
 	vote(chip->usb_icl_votable, SW_AICL_ICL_VOTER, false, 0);
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-	vote(chip->fcc_votable, TAPER_FCC_VOTER, false, 0);
-	vote(chip->fcc_votable, BATTCHG_PROTECT_FCC_VOTER, false, 0);
-#endif
 	vote(chip->aicl_deglitch_short_votable,
 		HVDCP_SHORT_DEGLITCH_VOTER, false, 0);
+#ifdef CONFIG_HTC_BATT_WA_PCN0013
+	restore_from_hvdcp_detection(chip);
+#ifdef CONFIG_HTC_BATT_PCN0015
+	g_is_charger_ability_detected = false;
+	g_is_hvdcp_detect_done = false;
+	g_is_5v_2a_detected = false;
+#endif //CONFIG_HTC_BATT_PCN0015
+#ifdef CONFIG_HTC_BATT_WA_PCN0008
+	/* Cancel smbchg_usb_limit_max_current_work */
+	if (delayed_work_pending(&chip->usb_limit_max_current))
+		cancel_delayed_work_sync(&chip->usb_limit_max_current);
+#endif //CONFIG_HTC_BATT_WA_PCN0008
+#ifdef CONFIG_HTC_BATT_PCN0015
+	if (delayed_work_pending(&chip->iusb_5v_2a_detect_work))
+		cancel_delayed_work_sync(&chip->iusb_5v_2a_detect_work);
+	if (delayed_work_pending(&chip->downgrade_iusb_work))
+		cancel_delayed_work_sync(&chip->downgrade_iusb_work);
+	/*Enable AICL*/
+	set_aicl_enable(true);
+	/*Default enable Input Missing Poller*/
+	rc = smbchg_sec_masked_write(chip,
+		chip->misc_base + TRIM_OPTIONS_7_0,
+		INPUT_MISSING_POLLER_EN_BIT, INPUT_MISSING_POLLER_EN_BIT);
+	if (rc < 0)
+		pr_err("Couldn't enable input missing poller rc=%d\n", rc);
+#endif //CONFIG_HTC_BATT_PCN0015
+#else
 	if (!chip->hvdcp_not_supported)
 		restore_from_hvdcp_detection(chip);
+#endif //CONFIG_HTC_BATT_WA_PCN0013
+
+#ifdef CONFIG_HTC_BATT_WA_PCN0017
+	if (!g_rerun_apsd_ignore_uv){
+		smbchg_set_hvdcp_enable(chip, false);
+		g_is_cable_workable_detect = false;
+		g_is_limit_IUSB = false;
+		g_typec_workable = 0;
+	}
+#endif //CONFIG_HTC_BATT_WA_PCN0017
+
+#ifdef CONFIG_HTC_BATT_PCN0016
+	chip->htcchg_error_flag = false;
+	pmi8994_set_htc_chg_charging_enabled(chip->chg_enabled && (!chip->htcchg_error_flag));
+#endif //CONFIG_HTC_BATT_PCN0016
 }
 
 static bool is_usbin_uv_high(struct smbchg_chip *chip)
@@ -6799,44 +5799,48 @@ static bool is_usbin_uv_high(struct smbchg_chip *chip)
 }
 
 #define HVDCP_NOTIFY_MS		2500
+#ifdef CONFIG_HTC_BATT
+#define AICL_INIT_BIT	BIT(7)
+#endif //CONFIG_HTC_BATT
 static void handle_usb_insertion(struct smbchg_chip *chip)
 {
 	enum power_supply_type usb_supply_type;
 	int rc;
 	char *usb_type_name = "null";
+#ifdef CONFIG_HTC_BATT_PCN0020
+	int pd_current;
+#endif //CONFIG_HTC_BATT_PCN0020
+#ifdef CONFIG_HTC_BATT
+		smbchg_sec_masked_write(chip, chip->misc_base + MISC_TRIM_OPT_15_8,
+				AICL_INIT_BIT, 0);
+#endif //CONFIG_HTC_BATT
 
 	pr_smb(PR_STATUS, "triggered\n");
 	/* usb inserted */
 	read_usb_type(chip, &usb_type_name, &usb_supply_type);
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	/*Wrong detection without battery, force to change usb type*/
-	if(factory_mode)
-		usb_supply_type = POWER_SUPPLY_TYPE_USB;
-#endif
 	pr_smb(PR_STATUS,
-		"inserted type = %d (%s)\n", usb_supply_type, usb_type_name);
+		"inserted type = %d (%s)", usb_supply_type, usb_type_name);
+
+#ifdef CONFIG_HTC_BATT_WA_PCN0017
+	if(g_is_cable_workable_detect == false){
+		smbchg_set_hvdcp_enable(chip, false);
+		if (usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP){
+			g_is_cable_workable_detect = true;
+			schedule_delayed_work(&chip->chk_cable_workable_work,
+					msecs_to_jiffies(CHK_CABLE_WORKABLE_DELAY_MS));
+		}
+	}
+	g_is_charger_ability_detected = false;
+#endif //CONFIG_HTC_BATT_WA_PCN0017
+
 	smbchg_aicl_deglitch_wa_check(chip);
 	if (chip->typec_psy)
 		update_typec_status(chip);
-
 	smbchg_change_usb_supply_type(chip, usb_supply_type);
 	if (!chip->skip_usb_notification) {
 		pr_smb(PR_MISC, "setting usb psy present = %d\n",
 				chip->usb_present);
-#ifdef CONFIG_LGE_USB_TYPE_C
-		if (!chip->typec_psy) {
-			chip->typec_psy = power_supply_get_by_name("usb_pd");
-			if (IS_ERR(chip->typec_psy))
-				chip->typec_psy = 0;
-		}
-		if (!chip->typec_psy) {
-			power_supply_set_present(chip->usb_psy, chip->usb_present);
-		} else {
-			power_supply_set_present(chip->typec_psy, 1);
-		}
-#else
 		power_supply_set_present(chip->usb_psy, chip->usb_present);
-#endif
 	}
 
 	/* Notify the USB psy if OV condition is not present */
@@ -6859,38 +5863,26 @@ static void handle_usb_insertion(struct smbchg_chip *chip)
 				POWER_SUPPLY_HEALTH_GOOD, rc);
 	}
 	schedule_work(&chip->usb_set_online_work);
-#ifdef CONFIG_LGE_PM_BATT_MANAGER
-	set_property_on_bm(chip, POWER_SUPPLY_PROP_BATTERY_CHARGING_ENABLED, 1);
-#endif
 
+#ifdef CONFIG_HTC_BATT_PCN0020
+	if(htc_battery_get_pd_type(&pd_current)){
+#ifdef CONFIG_HTC_BATT_PCN0015
+		g_is_charger_ability_detected = true;
+#endif //CONFIG_HTC_BATT_PCN0015
+		set_aicl_enable(false);
+		return;
+	}
+#endif //CONFIG_HTC_BATT_PCN0020
+
+#ifndef CONFIG_HTC_BATT_WA_PCN0017
 	if (!chip->hvdcp_not_supported &&
 			(usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP)) {
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-		// do nothing
-#else
-		cancel_delayed_work_sync(&chip->hvdcp_det_prepare_work);
-#endif
-#endif
 		cancel_delayed_work_sync(&chip->hvdcp_det_work);
 		smbchg_stay_awake(chip, PM_DETECT_HVDCP);
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-		// do nothing
-#else
-		schedule_delayed_work(&chip->hvdcp_det_prepare_work,
-					msecs_to_jiffies(HVDCP_PREPARE_MS));
-#endif
-#else
 		schedule_delayed_work(&chip->hvdcp_det_work,
 					msecs_to_jiffies(HVDCP_NOTIFY_MS));
-#endif
 	}
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-	schedule_delayed_work(&chip->battchg_protect_work,
-			msecs_to_jiffies(BATTCHG_PROTECT_POLLING_MS));
-#endif
-
+#endif //CONFIG_HTC_BATT_WA_PCN0017
 	smbchg_detect_parallel_charger(chip);
 
 	if (chip->parallel.avail && chip->aicl_done_irq
@@ -6900,49 +5892,6 @@ static void handle_usb_insertion(struct smbchg_chip *chip)
 	}
 }
 
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-#define LGE_CC_WORK_ENABLE_DELAY     100
-static void lge_cc_work_enable_check(struct work_struct *work)
-{
-	struct smbchg_chip *chip = container_of(work,
-			struct smbchg_chip, lge_cc_enable_work.work);
-
-	if (!chip->lge_cc_lpc || !chip->lge_cd_lpc
-				|| !chip->lge_adc_lpc
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_VZW_REQ
-				|| !chip->lge_vzw_lpc
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_STORE_MODE
-				|| !chip->lge_sm_lpc
-#endif
-	   ) {
-		if (!chip->lge_cd_lpc)
-			chip->lge_cd_lpc = lge_power_get_by_name("lge_cable_detect");
-		if (!chip->lge_cc_lpc)
-			chip->lge_cc_lpc = lge_power_get_by_name("lge_cc");
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_VZW_REQ
-		if (!chip->lge_vzw_lpc)
-			chip->lge_vzw_lpc = lge_power_get_by_name("lge_vzw");
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_ADC_QCT
-		if (!chip->lge_adc_lpc)
-			chip->lge_adc_lpc = lge_power_get_by_name("lge_adc");
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_STORE_MODE
-		if (!chip->lge_sm_lpc)
-			chip->lge_sm_lpc = lge_power_get_by_name("lge_sm");
-#endif
-
-		pr_info("Start lge_cc_work_enable\n");
-		schedule_delayed_work(&chip->lge_cc_enable_work,
-				round_jiffies_relative(
-					msecs_to_jiffies(LGE_CC_WORK_ENABLE_DELAY)));
-	} else {
-		pr_err("[LGE-CC] Regist all lg power class\n");
-		chip->lge_cc_lpc_finish = true;
-	}
-}
-#endif
 void update_usb_status(struct smbchg_chip *chip, bool usb_present, bool force)
 {
 	mutex_lock(&chip->usb_status_lock);
@@ -6958,10 +5907,6 @@ void update_usb_status(struct smbchg_chip *chip, bool usb_present, bool force)
 	} else if (chip->usb_present && !usb_present) {
 		chip->usb_present = usb_present;
 		handle_usb_removal(chip);
-#ifdef CONFIG_LGE_PM_WAKE_LOCK_FOR_CHG_LOGO
-		if (wake_lock_active(&chip->chg_logo_wake_lock))
-			wake_unlock(&chip->chg_logo_wake_lock);
-#endif
 	}
 
 	/* update FG */
@@ -6971,10 +5916,20 @@ unlock:
 	mutex_unlock(&chip->usb_status_lock);
 }
 
+extern int oc_enable;
 static int otg_oc_reset(struct smbchg_chip *chip)
 {
 	int rc;
 
+#ifdef CONFIG_HTC_BATT
+	int vbus_mv = 0;
+
+	vbus_mv = pmi8994_get_usbin_voltage_now()/1000;
+	if (vbus_mv < 3500 && !oc_enable) {
+		pr_info("%s: Skip oc_reset due to abnormal vbus voltage (%d mv, oc %s)\n", __func__, vbus_mv, oc_enable?"enable":"disable");
+		return 0;
+	}
+#endif //CONFIG_HTC_BATT
 	rc = smbchg_masked_write(chip, chip->bat_if_base + CMD_CHG_REG,
 						OTG_EN_BIT, 0);
 	if (rc)
@@ -6987,18 +5942,20 @@ static int otg_oc_reset(struct smbchg_chip *chip)
 	 * occurred notifying USB power supply to disable OTG. We
 	 * should not enable OTG in such cases.
 	 */
+#ifndef CONFIG_HTC_BATT_WA_PCN0012
 	if (!is_otg_present(chip)) {
 		pr_smb(PR_STATUS,
 			"OTG is not present, not enabling OTG_EN_BIT\n");
 		goto out;
 	}
-
+#endif //CONFIG_HTC_BATT_WA_PCN0012
 	rc = smbchg_masked_write(chip, chip->bat_if_base + CMD_CHG_REG,
 						OTG_EN_BIT, OTG_EN_BIT);
 	if (rc)
 		pr_err("Failed to re-enable OTG rc=%d\n", rc);
-
+#ifndef CONFIG_HTC_BATT_WA_PCN0012
 out:
+#endif //CONFIG_HTC_BATT_WA_PCN0012
 	return rc;
 }
 
@@ -7084,6 +6041,19 @@ static void increment_aicl_count(struct smbchg_chip *chip)
 			pr_smb(PR_INTERRUPT, "elp:%ld first:%ld now:%ld c=%d\n",
 				elapsed_seconds, chip->first_aicl_seconds,
 				now_seconds, chip->aicl_irq_count);
+#ifdef CONFIG_HTC_BATT_WA_PCN0008
+			/* Set current to 150 mA to avoid suspend */
+			rc = vote(chip->usb_suspend_votable, USB_EN_VOTER, false, 0);
+			smbchg_set_usb_current_max(chip, 150);
+
+			pr_smb(PR_INTERRUPT, "Bad cable, set current ma: %d\n", USB_MA_150);
+
+			/* Set the USB max current limit to 1500mA after 1 minute */
+			if (delayed_work_pending(&chip->usb_limit_max_current))
+				cancel_delayed_work(&chip->usb_limit_max_current);
+			schedule_delayed_work(&chip->usb_limit_max_current,
+				msecs_to_jiffies(INTERVAL_1_MINUTE_MS));
+#else
 			pr_smb(PR_INTERRUPT, "Disable AICL rerun\n");
 			chip->very_weak_charger = true;
 			bad_charger = true;
@@ -7108,7 +6078,7 @@ static void increment_aicl_count(struct smbchg_chip *chip)
 				pr_err("Can't vote %d current limit rc=%d\n",
 					CURRENT_100_MA, rc);
 			}
-
+#endif //CONFIG_HTC_BATT_WA_PCN0008
 			chip->aicl_irq_count = 0;
 		} else if ((get_prop_charge_type(chip) ==
 				POWER_SUPPLY_CHARGE_TYPE_FAST) &&
@@ -7254,49 +6224,6 @@ static int fake_insertion_removal(struct smbchg_chip *chip, bool insertion)
 	return 0;
 }
 
-#ifdef CONFIG_LGE_PM
-static int fake_insertion_removal_for_uv(
-	struct smbchg_chip *chip, bool insertion)
-{
-	int rc;
-
-	if (insertion) {
-		reinit_completion(&chip->src_det_raised);
-		reinit_completion(&chip->usbin_uv_lowered);
-	}
-
-	pr_smb(PR_MISC, "Allow only %s charger\n",
-			insertion ? "5-9V" : "9V only");
-	rc = smbchg_sec_masked_write(chip,
-			chip->usb_chgpth_base + USBIN_CHGR_CFG,
-			ADAPTER_ALLOWANCE_MASK,
-			insertion ?
-			USBIN_ADAPTER_5V_9V_CONT : USBIN_ADAPTER_9V);
-	if (rc < 0) {
-		pr_err("Couldn't write usb allowance rc=%d\n", rc);
-		return rc;
-	}
-
-	pr_smb(PR_MISC, "Waiting on %s usbin uv\n",
-			insertion ? "falling" : "rising");
-	rc = wait_for_usbin_uv(chip, !insertion);
-	if (rc < 0) {
-		pr_err("wait for usbin uv failed rc = %d\n", rc);
-		return rc;
-	}
-
-	pr_smb(PR_MISC, "Waiting on %s src det\n",
-			insertion ? "rising" : "falling");
-	rc = wait_for_src_detect(chip, insertion);
-	if (rc < 0) {
-		pr_err("wait for src detect failed rc = %d\n", rc);
-		return rc;
-	}
-
-	return 0;
-}
-#endif
-
 static void smbchg_handle_hvdcp3_disable(struct smbchg_chip *chip)
 {
 	enum power_supply_type usb_supply_type;
@@ -7314,18 +6241,8 @@ static void smbchg_handle_hvdcp3_disable(struct smbchg_chip *chip)
 		read_usb_type(chip, &usb_type_name, &usb_supply_type);
 		smbchg_change_usb_supply_type(chip, usb_supply_type);
 		if (usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP)
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-			// do nothing
-#else
-			schedule_delayed_work(&chip->hvdcp_det_prepare_work,
-				msecs_to_jiffies(HVDCP_PREPARE_MS));
-#endif
-			pr_info("HVDCP TEST\n");
-#else
 			schedule_delayed_work(&chip->hvdcp_det_work,
 				msecs_to_jiffies(HVDCP_NOTIFY_MS));
-#endif
 	} else {
 		smbchg_change_usb_supply_type(chip, POWER_SUPPLY_TYPE_UNKNOWN);
 	}
@@ -7358,8 +6275,7 @@ static int smbchg_prepare_for_pulsing(struct smbchg_chip *chip)
 
 	/* disable HVDCP */
 	pr_smb(PR_MISC, "Disable HVDCP\n");
-	rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + CHGPTH_CFG,
-			HVDCP_EN_BIT, 0);
+	rc = vote(chip->hvdcp_enable_votable, HVDCP_PULSING_VOTER, true, 0);
 	if (rc < 0) {
 		pr_err("Couldn't disable HVDCP rc=%d\n", rc);
 		goto out;
@@ -7464,9 +6380,7 @@ static int smbchg_unprepare_for_pulsing(struct smbchg_chip *chip)
 
 	/* enable HVDCP */
 	pr_smb(PR_MISC, "Enable HVDCP\n");
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + CHGPTH_CFG,
-				HVDCP_EN_BIT, HVDCP_EN_BIT);
+	rc = vote(chip->hvdcp_enable_votable, HVDCP_PULSING_VOTER, false, 1);
 	if (rc < 0) {
 		pr_err("Couldn't enable HVDCP rc=%d\n", rc);
 		return rc;
@@ -7614,6 +6528,11 @@ static int rerun_apsd(struct smbchg_chip *chip)
 
 out:
 	chip->hvdcp_3_det_ignore_uv = false;
+#ifdef CONFIG_HTC_BATT_PCN0015
+	g_is_charger_ability_detected = false;
+	g_is_hvdcp_detect_done = false;
+#endif //CONFIG_HTC_BATT_PCN0015
+
 	return rc;
 }
 
@@ -7796,6 +6715,10 @@ static int smbchg_hvdcp3_confirmed(struct smbchg_chip *chip)
 	 */
 	chip->parallel.enabled_once = false;
 
+#ifdef CONFIG_HTC_BATT
+	smbchg_sec_masked_write(chip, chip->misc_base + MISC_TRIM_OPT_15_8,
+			AICL_INIT_BIT, AICL_INIT_BIT);
+#endif //CONFIG_HTC_BATT
 	pr_smb(PR_MISC, "Retracting HVDCP vote for ICL\n");
 	rc = vote(chip->usb_icl_votable, HVDCP_ICL_VOTER, false, 0);
 	if (rc < 0)
@@ -7813,7 +6736,13 @@ static int smbchg_dp_dm(struct smbchg_chip *chip, int val)
 
 	switch (val) {
 	case POWER_SUPPLY_DP_DM_PREPARE:
+#ifdef CONFIG_HTC_BATT
+		if (!is_hvdcp_present(chip)
+			&& (POWER_SUPPLY_TYPE_USB_HVDCP !=  chip->usb_supply_type)
+			&& (POWER_SUPPLY_TYPE_USB_HVDCP_3 !=  chip->usb_supply_type)) {
+#else
 		if (!is_hvdcp_present(chip)) {
+#endif //CONFIG_HTC_BATT
 			pr_err("No pulsing unless HVDCP\n");
 			return -ENODEV;
 		}
@@ -7821,6 +6750,9 @@ static int smbchg_dp_dm(struct smbchg_chip *chip, int val)
 			rc = smbchg_prepare_for_pulsing_lite(chip);
 		else
 			rc = smbchg_prepare_for_pulsing(chip);
+#ifdef CONFIG_HTC_BATT
+		chip->pulse_cnt = 0;
+#endif //CONFIG_HTC_BATT
 		break;
 	case POWER_SUPPLY_DP_DM_UNPREPARE:
 		if (chip->schg_version == QPNP_SCHG_LITE)
@@ -7876,6 +6808,121 @@ static int smbchg_dp_dm(struct smbchg_chip *chip, int val)
 	return rc;
 }
 
+#ifdef CONFIG_HTC_BATT_PCN0016
+static int smbchg_get_htcchg_extension(struct smbchg_chip *chip)
+{
+	return chip->htcchg_ext_mode;
+}
+
+static int smbchg_set_htcchg_extension(struct smbchg_chip *chip, int val)
+{
+	int rc = 0;
+	enum power_supply_type usb_supply_type;
+	char *usb_type_name = "null";
+
+	switch (val) {
+	case POWER_SUPPLY_HTCCHG_EXT_START:
+		pr_smb(PR_STATUS, "POWER_SUPPLY_HTCCHG_EXT_START.\n");
+		chip->htcchg_ext_mode = true;
+
+		pr_smb(PR_MISC, "Disable AICL\n");
+		smbchg_sec_masked_write(chip, chip->usb_chgpth_base + USB_AICL_CFG,
+				AICL_EN_BIT, 0);
+
+		break;
+
+	case POWER_SUPPLY_HTCCHG_EXT_PREPARE:
+		break;
+
+	case POWER_SUPPLY_HTCCHG_EXT_UNPREPARE:
+		pr_smb(PR_STATUS, "POWER_SUPPLY_HTCCHG_EXT_UNPREPARE.\n");
+		if(chip->htcchg_ext_mode != true)
+			break;
+		if (chip->schg_version == QPNP_SCHG_LITE)
+			rc = smbchg_unprepare_for_pulsing_lite(chip);
+		else
+			rc = smbchg_unprepare_for_pulsing(chip);
+		break;
+
+	case POWER_SUPPLY_HTCCHG_EXT_STOP:
+		pr_smb(PR_STATUS, "POWER_SUPPLY_HTCCHG_EXT_STOP\n");
+		if(chip->htcchg_ext_mode != true)
+			break;
+		chip->htcchg_ext_mode = false;
+		htcchg_set_fastchg_current(chip, 0);
+		chip->pulse_cnt = 0;
+		read_usb_type(chip, &usb_type_name, &usb_supply_type);
+		pr_smb(PR_STATUS, "USB type = %d (%s)\n", usb_supply_type, usb_type_name);
+		if (is_hvdcp_present(chip)) {
+			pr_smb(PR_STATUS, "HVDCP Present]]\n");
+			usb_supply_type = POWER_SUPPLY_TYPE_USB_HVDCP;
+		}
+		if(is_usb_present(chip) || is_hvdcp_present(chip)) {
+			if (!chip->skip_usb_notification) {
+				power_supply_set_supply_type(chip->usb_psy,
+						usb_supply_type);
+			}
+			if (chip->psy_registered) {
+				power_supply_changed(&chip->batt_psy);
+			}
+		}
+		break;
+
+	case POWER_SUPPLY_HTCCHG_EXT_DP_PULSE:
+		if(chip->htcchg_ext_mode != true)
+			break;
+		if (chip->schg_version == QPNP_SCHG)
+			rc = set_usb_psy_dp_dm(chip,
+					POWER_SUPPLY_DP_DM_DP_PULSE);
+		else
+			rc = smbchg_dp_pulse_lite(chip);
+		if (!rc)
+			chip->pulse_cnt++;
+		pr_smb(PR_MISC, "POWER_SUPPLY_HTCCHG_EXT_DP_PULSE pulse_cnt = %d\n", chip->pulse_cnt);
+		break;
+
+	case POWER_SUPPLY_HTCCHG_EXT_DM_PULSE:
+		if(chip->htcchg_ext_mode != true)
+			break;
+		if (chip->schg_version == QPNP_SCHG)
+			rc = set_usb_psy_dp_dm(chip,
+					POWER_SUPPLY_DP_DM_DM_PULSE);
+		else
+			rc = smbchg_dm_pulse_lite(chip);
+		if (!rc && chip->pulse_cnt)
+			chip->pulse_cnt--;
+		pr_smb(PR_MISC, "POWER_SUPPLY_HTCCHG_EXT_DM_PULSE pulse_cnt = %d\n", chip->pulse_cnt);
+		break;
+
+	case POWER_SUPPLY_HTCCHG_EXT_ICL_UNSET:
+		pr_smb(PR_STATUS, "Retracting vote for ICL\n");
+		rc = vote(chip->usb_icl_votable, HTCCHG_ICL_VOTER,
+			false, 0);
+		pr_smb(PR_STATUS, "Effective ICL = %d mA\n", get_effective_result_locked(chip->usb_icl_votable));
+		break;
+
+	case POWER_SUPPLY_HTCCHG_EXT_ICL_SET_LOW:
+		/* Vote 100mA current limit */
+		pr_smb(PR_STATUS, "Vote ICL for 100 mA\n");
+		rc = vote(chip->usb_icl_votable, HTCCHG_ICL_VOTER, true, 100);
+		pr_smb(PR_STATUS, "Effective ICL = %d mA\n", get_effective_result_locked(chip->usb_icl_votable));
+		break;
+
+	case POWER_SUPPLY_HTCCHG_EXT_ICL_SET_HIGH:
+		/* Vote 100mA current limit */
+		pr_smb(PR_STATUS, "Vote ICL for 2500 mA\n");
+		rc = vote(chip->usb_icl_votable, HTCCHG_ICL_VOTER, true, 2500);
+		pr_smb(PR_STATUS, "Effective ICL = %d mA\n", get_effective_result_locked(chip->usb_icl_votable));
+		break;
+
+	default:
+		break;
+	}
+
+	return rc;
+}
+#endif // CONFIG_HTC_BATT_PCN0016
+
 static void update_typec_capability_status(struct smbchg_chip *chip,
 					const union power_supply_propval *val)
 {
@@ -7903,24 +6950,19 @@ static void update_typec_otg_status(struct smbchg_chip *chip, int mode,
 
 	if (mode == POWER_SUPPLY_TYPE_DFP) {
 		chip->typec_dfp = true;
-#ifndef CONFIG_LGE_USB_TYPE_C
 		power_supply_set_usb_otg(chip->usb_psy, chip->typec_dfp);
-#endif
 		/* update FG */
 		set_property_on_fg(chip, POWER_SUPPLY_PROP_STATUS,
 				get_prop_batt_status(chip));
 	} else if (force || chip->typec_dfp) {
 		chip->typec_dfp = false;
-#ifndef CONFIG_LGE_USB_TYPE_C
 		power_supply_set_usb_otg(chip->usb_psy, chip->typec_dfp);
-#endif
 		/* update FG */
 		set_property_on_fg(chip, POWER_SUPPLY_PROP_STATUS,
 				get_prop_batt_status(chip));
 	}
 }
 
-#ifndef CONFIG_LGE_PM
 #define CHARGE_OUTPUT_VTG_RATIO		840
 static int smbchg_get_iusb(struct smbchg_chip *chip)
 {
@@ -7945,33 +6987,6 @@ static int smbchg_get_iusb(struct smbchg_chip *chip)
 
 	return iusb_ua;
 }
-#endif
-
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_BATTERY_ID_CHECKER
-static int smbchg_batt_id_checker(struct smbchg_chip *chip) {
-	union lge_power_propval lge_val = {0,};
-	int rc;
-	bool valid_id;
-
-	if (!chip->lge_batt_id_lpc)
-		chip->lge_batt_id_lpc = lge_power_get_by_name("lge_batt_id");
-
-	if (chip->lge_batt_id_lpc) {
-		rc = chip->lge_batt_id_lpc->get_property(chip->lge_batt_id_lpc,
-				LGE_POWER_PROP_VALID_BATT, &lge_val);
-		if (rc < 0)
-			pr_err("Failed to get batt_id property\n");
-		else
-			valid_id = lge_val.intval;
-
-			return valid_id;
-	}
-
-	valid_id = false;
-
-	return valid_id;
-}
-#endif
 
 static enum power_supply_property smbchg_battery_properties[] = {
 	POWER_SUPPLY_PROP_STATUS,
@@ -7990,19 +7005,12 @@ static enum power_supply_property smbchg_battery_properties[] = {
 	POWER_SUPPLY_PROP_CURRENT_NOW,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_BATTERY_ID_CHECKER
-	POWER_SUPPLY_PROP_BATTERY_ID_CHECKER,
-#endif
-#ifdef CONFIG_LGE_PM_RESTORE_BATT_INFO
 	POWER_SUPPLY_PROP_RESISTANCE_ID,
 	POWER_SUPPLY_PROP_CHARGE_FULL,
-#endif
 	POWER_SUPPLY_PROP_SAFETY_TIMER_ENABLE,
 	POWER_SUPPLY_PROP_INPUT_CURRENT_MAX,
 	POWER_SUPPLY_PROP_INPUT_CURRENT_SETTLED,
-#ifndef CONFIG_LGE_PM
 	POWER_SUPPLY_PROP_INPUT_CURRENT_NOW,
-#endif
 	POWER_SUPPLY_PROP_FLASH_ACTIVE,
 	POWER_SUPPLY_PROP_FLASH_TRIGGER,
 	POWER_SUPPLY_PROP_DP_DM,
@@ -8010,10 +7018,10 @@ static enum power_supply_property smbchg_battery_properties[] = {
 	POWER_SUPPLY_PROP_RERUN_AICL,
 	POWER_SUPPLY_PROP_RESTRICTED_CHARGING,
 	POWER_SUPPLY_PROP_ALLOW_HVDCP3,
-#ifdef CONFIG_LGE_PM_FG_AGE
-	POWER_SUPPLY_PROP_BATTERY_CONDITION,
-#endif
 	POWER_SUPPLY_PROP_MAX_PULSE_ALLOWED,
+#ifdef CONFIG_HTC_BATT_PCN0016
+	POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT,
+#endif // CONFIG_HTC_BATT_PCN0016
 };
 
 static int smbchg_battery_set_property(struct power_supply *psy,
@@ -8036,6 +7044,9 @@ static int smbchg_battery_set_property(struct power_supply *psy,
 				!val->intval, 0);
 		chip->chg_enabled = val->intval;
 		schedule_work(&chip->usb_set_online_work);
+#ifdef CONFIG_HTC_BATT_PCN0016
+		pmi8994_set_htc_chg_charging_enabled(chip->chg_enabled && (!chip->htcchg_error_flag));
+#endif //CONFIG_HTC_BATT_PCN0016
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
 		chip->fake_battery_soc = val->intval;
@@ -8054,10 +7065,6 @@ static int smbchg_battery_set_property(struct power_supply *psy,
 		rc = smbchg_safety_timer_enable(chip, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_FLASH_ACTIVE:
-		if (val->intval) {
-			rc = vote(chip->usb_suspend_votable, POWER_SUPPLY_EN_VOTER, true, 0);
-		}
-
 		rc = smbchg_switch_buck_frequency(chip, val->intval);
 		if (rc) {
 			pr_err("Couldn't switch buck frequency, rc=%d\n", rc);
@@ -8070,10 +7077,10 @@ static int smbchg_battery_set_property(struct power_supply *psy,
 
 		rc = smbchg_otg_pulse_skip_disable(chip,
 				REASON_FLASH_ENABLED, val->intval);
-
-		if (!val->intval) {
-			rc = vote(chip->usb_suspend_votable, POWER_SUPPLY_EN_VOTER, false, 0);
-		}
+#ifdef CONFIG_HTC_BATT_PCN0016
+		pr_smb(PR_STATUS, "POWER_SUPPLY_PROP_FLASH_ACTIVE: %d\n", val->intval);
+		pmi8994_set_htc_chg_flash_active(val->intval);
+#endif //CONFIG_HTC_BATT_PCN0016
 		break;
 	case POWER_SUPPLY_PROP_FLASH_TRIGGER:
 		chip->flash_triggered = !!val->intval;
@@ -8086,32 +7093,35 @@ static int smbchg_battery_set_property(struct power_supply *psy,
 		rc = smbchg_dp_dm(chip, val->intval);
 		break;
 	case POWER_SUPPLY_PROP_RERUN_AICL:
-#ifdef CONFIG_LGE_PM
-		/*
-		 * rerun aicl caused by hvdcp3 optimization.
-		 * so clear aicl count to prevent disable AICL rerun
-		 */
-		pr_smb(PR_LGE, "rerun aicl triggered in userspace.\n");
-		chip->aicl_irq_count = 0;
-#endif
 		smbchg_rerun_aicl(chip);
 		break;
 	case POWER_SUPPLY_PROP_RESTRICTED_CHARGING:
 		rc = smbchg_restricted_charging(chip, val->intval);
 		break;
+#ifdef CONFIG_HTC_BATT_PCN0016
+	case POWER_SUPPLY_PROP_HTCCHG_EXT:
+		rc = smbchg_set_htcchg_extension(chip, val->intval);
+		break;
+	case POWER_SUPPLY_PROP_HTCCHG_ICL:
+		if(val->intval <= 0)
+			rc = vote(chip->usb_icl_votable, HTCCHG_ICL_VOTER, false, 0);
+		else
+			rc = vote(chip->usb_icl_votable, HTCCHG_ICL_VOTER, true, val->intval);
+		pr_smb(PR_STATUS, "Effective ICL = %d mA\n", get_effective_result_locked(chip->usb_icl_votable));
+		break;
+	case POWER_SUPPLY_PROP_HTCCHG_FCC:
+		if(val->intval <= 0)
+			htcchg_set_fastchg_current(chip, 0);
+		else
+			htcchg_set_fastchg_current(chip, val->intval);
+		pr_smb(PR_STATUS, "Effective FCC = %d mA\n", get_effective_result_locked(chip->fcc_votable));
+		break;
+#endif // CONFIG_HTC_BATT_PCN0016
 	case POWER_SUPPLY_PROP_CURRENT_CAPABILITY:
-#ifdef CONFIG_LGE_USB_TYPE_C
-		if (!chip->typec_psy)
-			chip->typec_psy = power_supply_get_by_name("usb_pd");
-#endif
 		if (chip->typec_psy)
 			update_typec_capability_status(chip, val);
 		break;
 	case POWER_SUPPLY_PROP_TYPEC_MODE:
-#ifdef CONFIG_LGE_USB_TYPE_C
-		if (!chip->typec_psy)
-			chip->typec_psy = power_supply_get_by_name("usb_pd");
-#endif
 		if (chip->typec_psy)
 			update_typec_otg_status(chip, val->intval, false);
 		break;
@@ -8121,31 +7131,6 @@ static int smbchg_battery_set_property(struct power_supply *psy,
 			power_supply_changed(&chip->batt_psy);
 		}
 		break;
-#ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
-	case POWER_SUPPLY_PROP_ENABLE_EVP_CHG:
-		chip->is_evp_ta = val->intval;
-		pr_smb(PR_LGE, "is_evp_ta = %d\n", chip->is_evp_ta);
-		schedule_delayed_work(&chip->enable_evp_chg_work, 0);
-		break;
-#endif
-#ifdef CONFIG_LGE_USB_TYPE_C
-	case POWER_SUPPLY_PROP_DP_ALT_MODE:
-		chip->dp_alt_mode = val->intval;
-		pr_smb(PR_LGE, "dp_alt_mode = %d\n", chip->dp_alt_mode);
-		break;
-#endif
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-	case POWER_SUPPLY_PROP_CTYPE_RP:
-#ifndef CONFIG_LGE_USB_ANX7688_ADC
-		if (chip->ctype_rp != RP_NONE && val->intval != RP_NONE) {
-			pr_smb(PR_LGE, "Ignore rp = %d\n", val->intval);
-			break;
-		}
-#endif
-		chip->ctype_rp = val->intval;
-		pr_smb(PR_LGE, "usb typec rp check = %d\n", chip->ctype_rp);
-		break;
-#endif
 	default:
 		return -EINVAL;
 	}
@@ -8169,9 +7154,6 @@ static int smbchg_battery_is_writeable(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_DP_DM:
 	case POWER_SUPPLY_PROP_RERUN_AICL:
 	case POWER_SUPPLY_PROP_RESTRICTED_CHARGING:
-#ifdef CONFIG_LGE_USB_TYPE_C
-	case POWER_SUPPLY_PROP_DP_ALT_MODE:
-#endif
 	case POWER_SUPPLY_PROP_ALLOW_HVDCP3:
 		rc = 1;
 		break;
@@ -8191,11 +7173,7 @@ static int smbchg_battery_get_property(struct power_supply *psy,
 
 	switch (prop) {
 	case POWER_SUPPLY_PROP_STATUS:
-#ifdef CONFIG_LGE_PM
-		val->intval = get_prop_batt_status_for_ui(chip);
-#else
 		val->intval = get_prop_batt_status(chip);
-#endif
 		break;
 	case POWER_SUPPLY_PROP_PRESENT:
 		val->intval = get_prop_batt_present(chip);
@@ -8205,11 +7183,6 @@ static int smbchg_battery_get_property(struct power_supply *psy,
 			!get_effective_result(chip->battchg_suspend_votable);
 		break;
 	case POWER_SUPPLY_PROP_CHARGING_ENABLED:
-		if (chip->usb_present || chip->dc_present)
-			chip->chg_enabled = true;
-		else
-			chip->chg_enabled = false;
-
 		val->intval = chip->chg_enabled;
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_TYPE:
@@ -8245,35 +7218,19 @@ static int smbchg_battery_get_property(struct power_supply *psy,
 	/* properties from fg */
 	case POWER_SUPPLY_PROP_CAPACITY:
 		val->intval = get_prop_batt_capacity(chip);
-#ifdef CONFIG_LGE_PM_PSEUDO_BATTERY
-		if (get_pseudo_batt_info(PSEUDO_BATT_MODE))
-			val->intval = get_pseudo_batt_info(PSEUDO_BATT_CAPACITY);
-#endif
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		val->intval = get_prop_batt_current_now(chip);
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
 		val->intval = get_prop_batt_voltage_now(chip);
-#ifdef CONFIG_LGE_PM_PSEUDO_BATTERY
-		if (get_pseudo_batt_info(PSEUDO_BATT_MODE))
-			val->intval = get_pseudo_batt_info(PSEUDO_BATT_VOLT);
-		smbchg_set_vbat_low_thr(chip);
-#endif
 		break;
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_BATTERY_ID_CHECKER
-	case POWER_SUPPLY_PROP_BATTERY_ID_CHECKER:
-		val->intval = smbchg_batt_id_checker(chip);
-		break;
-#endif
-#ifdef CONFIG_LGE_PM_RESTORE_BATT_INFO
 	case POWER_SUPPLY_PROP_RESISTANCE_ID:
 		val->intval = get_prop_batt_resistance_id(chip);
 		break;
 	case POWER_SUPPLY_PROP_CHARGE_FULL:
 		val->intval = get_prop_batt_full_charge(chip);
 		break;
-#endif
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = get_prop_batt_temp(chip);
 		break;
@@ -8298,40 +7255,30 @@ static int smbchg_battery_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_RERUN_AICL:
 		val->intval = 0;
 		break;
-#ifndef CONFIG_LGE_PM
+#ifdef CONFIG_HTC_BATT_PCN0016
+	case POWER_SUPPLY_PROP_INPUT_CURRENT_LIMIT:
+		val->intval = get_effective_result_locked(chip->usb_icl_votable);
+		break;
+	case POWER_SUPPLY_PROP_HTCCHG_EXT:
+		val->intval = smbchg_get_htcchg_extension(chip);
+		break;
+#endif // CONFIG_HTC_BATT_PCN0016
 	case POWER_SUPPLY_PROP_INPUT_CURRENT_NOW:
 		val->intval = smbchg_get_iusb(chip);
 		break;
-#endif
 	case POWER_SUPPLY_PROP_ALLOW_HVDCP3:
 		val->intval = chip->allow_hvdcp3_detection;
 		break;
-#ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
-	case POWER_SUPPLY_PROP_ENABLE_EVP_CHG:
-		val->intval = chip->is_evp_ta;
-		break;
-#endif
-#ifdef CONFIG_LGE_USB_TYPE_C
-	case POWER_SUPPLY_PROP_DP_ALT_MODE:
-		val->intval = chip->dp_alt_mode;
-		break;
-#endif
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-	case POWER_SUPPLY_PROP_CTYPE_RP:
-		val->intval = chip->ctype_rp;
-		break;
-#endif
-#ifdef CONFIG_LGE_PM_FG_AGE
-	case POWER_SUPPLY_PROP_BATTERY_CONDITION:
-		val->intval = get_prop_battery_condition(chip);
-		break;
-#endif
 	case POWER_SUPPLY_PROP_MAX_PULSE_ALLOWED:
 		val->intval = chip->max_pulse_allowed;
 		break;
 	default:
 		return -EINVAL;
 	}
+#ifdef CONFIG_HTC_BATT
+	if (prop != POWER_SUPPLY_PROP_CAPACITY)
+		htc_battery_info_update(prop, val->intval);
+#endif // CONFIG_HTC_BATT
 	return 0;
 }
 
@@ -8425,7 +7372,6 @@ static int smbchg_dc_is_writeable(struct power_supply *psy,
 #define BAT_LOW_BIT		BIT(5)
 #define BAT_MISSING_BIT		BIT(6)
 #define BAT_TERM_MISSING_BIT	BIT(7)
-#ifndef CONFIG_LGE_PM
 static irqreturn_t batt_hot_handler(int irq, void *_chip)
 {
 	struct smbchg_chip *chip = _chip;
@@ -8462,6 +7408,10 @@ static irqreturn_t batt_cold_handler(int irq, void *_chip)
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_HTC_BATT_PCN0013
+#define TEMP_NORMAL_TO_WARM	470
+#define TEMP_WARM_TO_NORMAL	450
+#endif //CONFIG_HTCBATT_PCN0013
 static irqreturn_t batt_warm_handler(int irq, void *_chip)
 {
 	struct smbchg_chip *chip = _chip;
@@ -8475,6 +7425,14 @@ static irqreturn_t batt_warm_handler(int irq, void *_chip)
 		power_supply_changed(&chip->batt_psy);
 	set_property_on_fg(chip, POWER_SUPPLY_PROP_HEALTH,
 			get_prop_batt_health(chip));
+#ifdef CONFIG_HTC_BATT_PCN0013
+	if (chip->batt_warm)
+		set_property_on_fg(chip, POWER_SUPPLY_PROP_WARM_TEMP, TEMP_WARM_TO_NORMAL);
+	else {
+		set_property_on_fg(chip, POWER_SUPPLY_PROP_WARM_TEMP, TEMP_NORMAL_TO_WARM);
+		schedule_work(&chip->clean_tcc_WA);
+	}
+#endif //CONFIG_HTCBATT_PCN0013
 	return IRQ_HANDLED;
 }
 
@@ -8493,7 +7451,6 @@ static irqreturn_t batt_cool_handler(int irq, void *_chip)
 			get_prop_batt_health(chip));
 	return IRQ_HANDLED;
 }
-#endif
 
 static irqreturn_t batt_pres_handler(int irq, void *_chip)
 {
@@ -8523,7 +7480,12 @@ static irqreturn_t chg_error_handler(int irq, void *_chip)
 	struct smbchg_chip *chip = _chip;
 	int rc = 0;
 	u8 reg;
+#ifdef CONFIG_HTC_BATT
+	enum power_supply_type usb_supply_type;
+	char *usb_type_name = "null";
 
+	read_usb_type(chip, &usb_type_name, &usb_supply_type);
+#endif //CONFIG_HTC_BATT
 	pr_smb(PR_INTERRUPT, "chg-error triggered\n");
 
 	rc = smbchg_read(chip, &reg, chip->chgr_base + RT_STS, 1);
@@ -8542,23 +7504,118 @@ static irqreturn_t chg_error_handler(int irq, void *_chip)
 		power_supply_changed(&chip->batt_psy);
 	smbchg_charging_status_change(chip);
 	smbchg_wipower_check(chip);
+#ifdef CONFIG_HTC_BATT
+	if (reg & CHG_COMP_SFT_BIT) {
+		pr_info("Safety timer (%dmins) timeout with chg_src = %s\n",
+			chip->safety_time, usb_type_name);
+	} else {
+		dump_regs(chip);
+	}
+#endif //CONFIG_HTC_BATT
+
+#ifdef CONFIG_HTC_BATT_PCN0016
+	chip->htcchg_error_flag = true;
+	pmi8994_set_htc_chg_charging_enabled(0);
+#endif //CONFIG_HTC_BATT_PCN0016
+
 	return IRQ_HANDLED;
 }
+
+#ifdef CONFIG_HTC_BATT
+#define DISCHARGE_WINDOW_MS	200
+#define VFLOAT_COMP_WARM	0x10
+#define VFLOAT_VOTLAGE_UV	4400000
+static void smbchg_clean_tcc_WA_work(struct work_struct *work)
+{
+	int level = 0;
+	int vbat_uv = 0;
+	u8 reg = 0;
+	int rc;
+
+	if(!the_chip) {
+		pr_err("called before init\n");
+		return;
+	}
+
+	level = htc_battery_level_adjust();
+	vbat_uv = get_prop_batt_voltage_now(the_chip);
+
+	/* Only execute WA while below conditions are all true */
+	/* Condition#1: Cable inserted */
+	if (the_chip->usb_supply_type == POWER_SUPPLY_TYPE_UNKNOWN) {
+		pr_smb(PR_STATUS, "Skip, no cable inserted.\n");
+		return;
+	}
+
+	/* Condition#2: VFLOAT COMP level not at WARM (4.1V) */
+	if (the_chip->float_voltage_comp == VFLOAT_COMP_WARM) {
+		pr_smb(PR_STATUS, "Skip, float_voltage_comp == %d.\n",
+				VFLOAT_COMP_WARM);
+		return;
+	}
+
+	/* Condition#3: VBAT less than 4.4V */
+	if (vbat_uv >=  VFLOAT_VOTLAGE_UV) {
+		pr_smb(PR_STATUS, "Skip, vbat_uv: %d\n.", vbat_uv);
+		return;
+	}
+
+	/* Condition#4: Level not reach 100 */
+	if (level == 100) {
+		pr_smb(PR_STATUS, "Skip, battery level reach 100.\n");
+		return;
+	}
+
+	/* Condition#5: TCC (0x1010 BIT7) is raised */
+	rc = smbchg_read(the_chip, &reg, the_chip->chgr_base + RT_STS, 1);
+	if (rc < 0) {
+		dev_err(the_chip->dev, "Unable to read RT_STS rc = %d\n", rc);
+		return;
+	}
+	if (reg & BAT_TCC_REACHED_BIT) {
+		pr_smb(PR_STATUS, "Discharge %dms to clear TCC(0x1010 BIT7)\n",
+					DISCHARGE_WINDOW_MS);
+		vote(the_chip->usb_suspend_votable, USER_EN_VOTER, true, 0);
+		msleep(DISCHARGE_WINDOW_MS);
+		vote(the_chip->usb_suspend_votable, USER_EN_VOTER, false, 0);
+	}
+	return;
+};
+#endif
+
+#ifdef CONFIG_HTC_BATT_PCN0010
+static void smbchg_usb_limit_current_WA_work(struct work_struct *work)
+{
+	int rc = 0;
+	if(!the_chip) {
+		pr_err("called before init\n");
+		return;
+	}
+	/* Disable AICL */
+	smbchg_sec_masked_write(the_chip, the_chip->usb_chgpth_base + USB_AICL_CFG,
+			AICL_EN_BIT, 0);
+	pr_smb(PR_INTERRUPT, "AICL disabled\n");
+
+	rc = vote(the_chip->usb_icl_votable, PSY_ICL_VOTER, true, USB_MA_1000);
+	if (rc < 0)
+		pr_err("Couldn't set usb current rc = %d\n", rc);
+	else
+		pr_smb(PR_INTERRUPT, "USB max current changed to 1A\n");
+
+
+	/* Add a delay so that AICL successfully clears */
+	msleep(50);
+	smbchg_sec_masked_write(the_chip, the_chip->usb_chgpth_base + USB_AICL_CFG,
+			AICL_EN_BIT, AICL_EN_BIT);
+	pr_smb(PR_INTERRUPT, "AICL re-enabled\n");
+}
+#endif //CONFIG_HTC_BATT_PCN0010
 
 static irqreturn_t fastchg_handler(int irq, void *_chip)
 {
 	struct smbchg_chip *chip = _chip;
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	union lge_power_propval lge_val = {0,};
-#endif
 
 	pr_smb(PR_INTERRUPT, "p2f triggered\n");
-#ifdef CONFIG_LGE_PM
-	if (!chip->usb_present) {
-		pr_smb(PR_LGE, "illegal interrupt triggered, ignore\n");
-		return IRQ_HANDLED;
-	}
-#endif
 
 	if (is_usb_present(chip) || is_dc_present(chip)) {
 		smbchg_detect_parallel_charger(chip);
@@ -8569,18 +7626,6 @@ static irqreturn_t fastchg_handler(int irq, void *_chip)
 		power_supply_changed(&chip->batt_psy);
 	smbchg_charging_status_change(chip);
 	smbchg_wipower_check(chip);
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-	if (!chip->lge_cc_lpc)
-		chip->lge_cc_lpc = lge_power_get_by_name("lge_cc");
-	if (chip->lge_cc_lpc) {
-		if(get_prop_batt_status(chip)
-					== POWER_SUPPLY_STATUS_CHARGING){
-		lge_val.intval = 0;
-		chip->lge_cc_lpc->set_property(chip->lge_cc_lpc,
-				LGE_POWER_PROP_CHARGE_DONE, &lge_val);
-		}
-	}
-#endif
 	return IRQ_HANDLED;
 }
 
@@ -8594,10 +7639,7 @@ static irqreturn_t chg_hot_handler(int irq, void *_chip)
 static irqreturn_t chg_term_handler(int irq, void *_chip)
 {
 	struct smbchg_chip *chip = _chip;
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	union lge_power_propval lge_val = {0,};
-	int rc;
-#endif
+
 	pr_smb(PR_INTERRUPT, "tcc triggered\n");
 	/*
 	 * Charge termination is a pulse and not level triggered. That means,
@@ -8608,45 +7650,14 @@ static irqreturn_t chg_term_handler(int irq, void *_chip)
 	 */
 	set_property_on_fg(chip, POWER_SUPPLY_PROP_CHARGE_DONE, 1);
 
-#ifdef CONFIG_LGE_PM_DIS_AICL_IRQ_WAKE
-	if (chip->psy_registered) {
-		if (chip->enable_aicl_wake) {
-			pr_smb(PR_LGE, "disable aicl_done_irq\n");
-			disable_irq_wake(chip->aicl_done_irq);
-			chip->enable_aicl_wake = false;
-		}
-	} else {
-		pr_smb(PR_LGE, "smbchg irqs are not registered\n");
-	}
-#endif
-
-#ifdef CONFIG_LGE_PM_VFLOAT_TRIM_RESTORE
-	smbchg_vfloat_trim_check_ok(chip);
-#endif
-
 	smbchg_parallel_usb_check_ok(chip);
 	if (chip->psy_registered)
 		power_supply_changed(&chip->batt_psy);
 	smbchg_charging_status_change(chip);
+#ifdef CONFIG_HTC_BATT
+	g_is_batt_full_eoc_stop = true;
+#endif
 
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	if (!chip->lge_cd_lpc)
-		chip->lge_cd_lpc = lge_power_get_by_name("lge_cable_detect");
-	if (chip->lge_cd_lpc) {
-		lge_val.intval = 1;
-		rc = chip->lge_cd_lpc->set_property(chip->lge_cd_lpc,
-				LGE_POWER_PROP_CHARGE_DONE, &lge_val);
-	}
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-	if (!chip->lge_cc_lpc)
-		chip->lge_cc_lpc = lge_power_get_by_name("lge_cc");
-	if (chip->lge_cc_lpc) {
-		lge_val.intval = 1;
-		rc = chip->lge_cc_lpc->set_property(chip->lge_cc_lpc,
-				LGE_POWER_PROP_CHARGE_DONE, &lge_val);
-	}
-#endif
 	return IRQ_HANDLED;
 }
 
@@ -8673,17 +7684,6 @@ static irqreturn_t recharge_handler(int irq, void *_chip)
 
 	smbchg_read(chip, &reg, chip->chgr_base + RT_STS, 1);
 	pr_smb(PR_INTERRUPT, "triggered: 0x%02x\n", reg);
-#ifdef CONFIG_LGE_PM_DIS_AICL_IRQ_WAKE
-	if (chip->psy_registered) {
-		if (!chip->enable_aicl_wake) {
-			pr_smb(PR_LGE, "enable aicl_done_irq\n");
-			enable_irq_wake(chip->aicl_done_irq);
-			chip->enable_aicl_wake = true;
-		}
-	} else {
-		pr_smb(PR_LGE, "smbchg irqs are not registered\n");
-	}
-#endif
 	smbchg_parallel_usb_check_ok(chip);
 	if (chip->psy_registered)
 		power_supply_changed(&chip->batt_psy);
@@ -8709,13 +7709,92 @@ static irqreturn_t wdog_timeout_handler(int irq, void *_chip)
  * @chip: pointer to smbchg_chip
  * @rt_stat: the status bit indicating switcher turning on or off
  */
+ #ifdef CONFIG_HTC_BATT_PCN0010
+ #define POWER_OK_BIT   BIT(0)
+ #define SEC_TO_MS   1000
+ #define MS_TO_US   1000
+ #define OCP_RELEASE_TIME_UPPER_BOUND_MS	180000
+ #endif 
+
+/**
+ * power_ok_handler() - called when the switcher turns on or turns off
+ * @chip: pointer to smbchg_chip
+ * @rt_stat: the status bit indicating switcher turning on or off
+ */
 static irqreturn_t power_ok_handler(int irq, void *_chip)
 {
 	struct smbchg_chip *chip = _chip;
 	u8 reg = 0;
+#ifdef CONFIG_HTC_BATT_PCN0010
+	int power_ok;
+	long diff;
+	unsigned long dischg_time_ms;
+	unsigned long cur_jiffies;
+	static int first = 1;
+	static int prev_power_ok = -1;
+	static unsigned long prev_dischg_time_ms;
+	static struct timeval dischg_last_time;
+	struct timeval rtc_now;
+#endif //CONFIG_HTC_BATT_PCN0010
 
 	smbchg_read(chip, &reg, chip->misc_base + RT_STS, 1);
+
+#ifdef CONFIG_HTC_BATT_PCN0010
+	if (reg & POWER_OK_BIT)
+		power_ok = 1;
+	else
+		power_ok = 0;
+
+	cur_jiffies = jiffies;
+	do_gettimeofday(&rtc_now);
+
+	if ((power_ok == 0) && (prev_power_ok == 1)) {
+		//charging --> discharging
+		dischg_last_time = rtc_now;
+		dischg_time_ms = 0;
+		first = 0;
+		pr_smb(PR_INTERRUPT, "triggered: 0x%02x.\n", reg);
+	} else if ((power_ok == 1) && (prev_power_ok == 0) && (first == 0)){
+		//discharging --> charging
+		dischg_time_ms = ((rtc_now.tv_sec - dischg_last_time.tv_sec) * SEC_TO_MS) +
+						((rtc_now.tv_usec - dischg_last_time.tv_usec) / MS_TO_US);
+
+		//if two dichg time is very close (less than 1 second)
+		//And it continuously added to 3, set IUSB_MAX as 1A.
+		diff = ABS(dischg_time_ms - prev_dischg_time_ms);
+
+		if ((diff < 1200) && (dischg_time_ms <= OCP_RELEASE_TIME_UPPER_BOUND_MS)) {
+			if(++g_count_same_dischg == 3) {
+				g_is_limit_IUSB = true;
+				g_count_same_dischg = 0;
+				pr_smb(PR_INTERRUPT, "Start to limit USB current\n");
+				/* Immediately limit the usb current */
+				schedule_work(&chip->usb_aicl_limit_current);
+			}
+		} else {
+			g_is_limit_IUSB = false;
+			g_count_same_dischg = 0;
+		}
+		pr_smb(PR_INTERRUPT, "triggered: 0x%02x. "
+				"prev_dischg_time_ms(%lu) dischg_time_ms(%lu) "
+				"diff(%ld) count_same_dischg(%d) limit_iusb(%d)\n",
+				reg,
+				prev_dischg_time_ms,
+				dischg_time_ms,
+				diff,
+				g_count_same_dischg,
+				g_is_limit_IUSB);
+
+		prev_dischg_time_ms = dischg_time_ms;
+	} else
+		pr_smb(PR_INTERRUPT, "triggered: 0x%02x. prev_power_ok(%d) "
+				"power_ok(%d) \n", reg, prev_power_ok, power_ok);
+
+	prev_power_ok = power_ok;
+#else
 	pr_smb(PR_INTERRUPT, "triggered: 0x%02x\n", reg);
+#endif //CONFIG_HTC_BATT_PCN0010
+
 	return IRQ_HANDLED;
 }
 
@@ -8780,8 +7859,12 @@ static irqreturn_t usbin_ov_handler(int irq, void *_chip)
 		chip->usb_ov_det = false;
 		/* If USB is present, then handle the USB insertion */
 		usb_present = is_usb_present(chip);
+#ifdef CONFIG_HTC_BATT_WA_PCN0009
+		update_usb_status(chip, usb_present, true);
+#else
 		if (usb_present)
 			update_usb_status(chip, usb_present, false);
+#endif //CONFIG_HTC_BATT_WA_PCN0009
 	}
 out:
 	return IRQ_HANDLED;
@@ -8799,13 +7882,10 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 	struct smbchg_chip *chip = _chip;
 	int aicl_level = smbchg_get_aicl_level_ma(chip);
 	int rc;
+#ifdef CONFIG_HTC_BATT_WA_PCN0011
+	int vbus = pmi8994_get_usbin_voltage_now();
+#endif //CONFIG_HTC_BATT_WA_PCN0011
 	u8 reg;
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-	union lge_power_propval lge_val = {0,};
-	int current_max_mode = 0;
-	enum power_supply_type usb_supply_type;
-	char *usb_type_name = "null";
-#endif
 
 	rc = smbchg_read(chip, &reg, chip->usb_chgpth_base + RT_STS, 1);
 	if (rc) {
@@ -8813,11 +7893,20 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 		goto out;
 	}
 
+#ifdef CONFIG_HTC_BATT_WA_PCN0011
+	pr_smb(PR_STATUS,
+		"%s chip->usb_present = %d rt_sts = 0x%02x hvdcp_3_det_ignore_uv = %d"
+		" rerun_apsd_ignore_uv = %d aicl = %d, vbus = %d\n",
+		(chip->hvdcp_3_det_ignore_uv || g_rerun_apsd_ignore_uv) ? "Ignoring":"",
+		chip->usb_present, reg, chip->hvdcp_3_det_ignore_uv, g_rerun_apsd_ignore_uv,
+		aicl_level, vbus);
+#else
 	pr_smb(PR_STATUS,
 		"%s chip->usb_present = %d rt_sts = 0x%02x hvdcp_3_det_ignore_uv = %d aicl = %d\n",
 		chip->hvdcp_3_det_ignore_uv ? "Ignoring":"",
 		chip->usb_present, reg, chip->hvdcp_3_det_ignore_uv,
 		aicl_level);
+#endif //CONFIG_HTC_BATT_WA_PCN0011
 
 	/*
 	 * set usb_psy's dp=f dm=f if this is a new insertion, i.e. it is
@@ -8835,16 +7924,32 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 	else
 		complete_all(&chip->usbin_uv_lowered);
 
+#ifdef CONFIG_HTC_BATT_WA_PCN0011
+	if (chip->hvdcp_3_det_ignore_uv || g_rerun_apsd_ignore_uv)
+		goto out;
+#else
 	if (chip->hvdcp_3_det_ignore_uv)
 		goto out;
+#endif //CONFIG_HTC_BATT_WA_PCN0011
+
+#ifdef CONFIG_HTC_BATT_PCN0016
+	if(chip->htcchg_ext_mode) {
+		pr_smb(PR_STATUS, "Ignore USBIN_UV when htcchg enabled.\n");
+		goto out;
+	}
+#endif //CONFIG_HTC_BATT_PCN0016
 
 	if ((reg & USBIN_UV_BIT) && (reg & USBIN_SRC_DET_BIT)) {
-#ifdef CONFIG_LGE_PM_DEBUG
-		pr_smb(PR_STATUS, "Very weak charger detected. VBUS[%d]\n",
-				get_usb_adc(chip));
-#else
 		pr_smb(PR_STATUS, "Very weak charger detected\n");
-#endif
+#ifdef CONFIG_HTC_BATT_WA_PCN0013
+		if ((chip->usb_supply_type == POWER_SUPPLY_TYPE_USB_HVDCP) ||
+			(chip->usb_supply_type == POWER_SUPPLY_TYPE_USB_HVDCP_3)){
+			cancel_delayed_work_sync(&chip->force_hvdcp_work);
+			schedule_delayed_work(&chip->force_hvdcp_work,
+						msecs_to_jiffies(300));
+			goto out;
+		}
+#endif //CONFIG_HTC_BATT_WA_PCN0013
 		chip->very_weak_charger = true;
 		rc = smbchg_read(chip, &reg,
 				chip->usb_chgpth_base + ICL_STS_2_REG, 1);
@@ -8854,44 +7959,29 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 			goto out;
 		}
 		if ((reg & ICL_MODE_MASK) != ICL_MODE_HIGH_CURRENT) {
+#ifdef CONFIG_HTC_BATT_WA_PCN0008
+			/* WA_SDP_CHG_SUSPEND:
+			* mark the code which disable charging by REASON_WEAK_CHARGER
+			* and increase count number to monitor the symptom
+			*/
+			pr_smb(PR_STATUS, "Not let SDP into suspend. reg=0x%X\n", reg);
+#else
 			/*
 			 * If AICL is not even enabled, this is either an
 			 * SDP or a grossly out of spec charger. Do not
 			 * draw any current from it.
 			 */
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-		if (!chip->lge_cc_lpc)
-			pr_err("%s : lge_cc_lpc is not yet ready\n", __func__);
-		else {
-			rc = chip->lge_cc_lpc->get_property(chip->lge_cc_lpc,
-				POWER_SUPPLY_PROP_USB_CURRENT_MAX_MODE,	&lge_val);
-			if (rc < 0)
-				pr_smb(PR_LGE, "could not get current_max mode,"
-					" rc=%d\n", rc);
-			else
-				current_max_mode = lge_val.intval;
-		}
-
-		read_usb_type(chip, &usb_type_name, &usb_supply_type);
-
-		pr_smb(PR_LGE, "usb_type[%s], current_max_mode[%d]\n",
-			usb_type_name,  current_max_mode);
-
-		if (usb_supply_type == POWER_SUPPLY_TYPE_USB ||
-			usb_supply_type == POWER_SUPPLY_TYPE_USB_CDP) {
-			if (current_max_mode) {
-				pr_smb(PR_LGE, "skip usb_suspend votable\n");
-				goto out;
-			}
-		}
-#else
 			rc = vote(chip->usb_suspend_votable,
 					WEAK_CHARGER_EN_VOTER, true, 0);
-#endif
 			if (rc < 0)
 				pr_err("could not disable charger: %d", rc);
+#endif //CONFIG_HTC_BATT_WA_PCN0008
 		} else if (aicl_level == chip->tables.usb_ilim_ma_table[0]) {
-#ifndef CONFIG_LGE_PM
+#ifdef CONFIG_HTC_BATT_WA_PCN0008
+		/* No need to disable AICL rerun */
+		/* This will not allow WA to avoid suspend by fixing current to 150mA*/
+		pr_smb(PR_STATUS, "Not disable aicl rerun.\n");
+#else
 			/*
 			 * we are in a situation where the adapter is not able
 			 * to supply even 300mA. Disable hw aicl reruns else it
@@ -8902,7 +7992,7 @@ static irqreturn_t usbin_uv_handler(int irq, void *_chip)
 			if (rc < 0)
 				pr_err("Couldn't disable hw aicl rerun rc=%d\n",
 						rc);
-#endif
+#endif //CONFIG_HTC_BATT_WA_PCN0008
 		}
 		pr_smb(PR_MISC, "setting usb psy health UNSPEC_FAILURE\n");
 		rc = power_supply_set_health_state(chip->usb_psy,
@@ -8974,6 +8064,9 @@ static irqreturn_t src_detect_handler(int irq, void *_chip)
 	} else {
 		update_usb_status(chip, 0, false);
 		chip->aicl_irq_count = 0;
+#ifdef CONFIG_HTC_BATT
+		g_is_batt_full_eoc_stop = false;
+#endif //CONFIG_HTC_BATT
 	}
 out:
 	return IRQ_HANDLED;
@@ -8982,8 +8075,22 @@ out:
 /**
  * otg_oc_handler() - called when the usb otg goes over current
  */
+
+#ifdef CONFIG_HTC_BATT
+/* Set NUM_OTG_RETRIES to 1 due to too many oc_reset will pull up vbus
+ * to a specific value which can trigger large current,	in order to avoid
+ * this situation, lower down retry times will be helpful.
+*/
+#define NUM_OTG_RETRIES			1
+#else
 #define NUM_OTG_RETRIES			5
+#endif //CONFIG_HTC_BATT
+
 #define OTG_OC_RETRY_DELAY_US		50000
+
+/**
+ * otg_oc_handler() - called when the usb otg goes over current
+ */
 static irqreturn_t otg_oc_handler(int irq, void *_chip)
 {
 	int rc;
@@ -9031,9 +8138,93 @@ static irqreturn_t otg_fail_handler(int irq, void *_chip)
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_HTC_BATT_PCN0015
+#ifdef CONFIG_HTC_BATT_WA_PCN0006
+#define SKIP_HARD_LIMIT_CHECK_LEVEL	70
+#endif //CONFIG_HTC_BATT_WA_PCN0006
+void check_charger_ability(int aicl_level)
+{
+	union power_supply_propval prop = {0,};
+	int rc, usb_supply_type;
+#ifdef CONFIG_HTC_BATT_WA_PCN0006
+	u8 reg;
+#endif //CONFIG_HTC_BATT_WA_PCN0006
+	int level;
+
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return;
+	}
+
+	level = get_prop_batt_capacity(the_chip);
+	rc = the_chip->usb_psy->get_property(the_chip->usb_psy,
+				POWER_SUPPLY_PROP_TYPE, &prop);
+	usb_supply_type = prop.intval;
+	pr_smb(PR_STATUS, "CHG_TYPE is %d, AICL is %d, level is %d\n",
+		usb_supply_type, aicl_level, level);
+
+	if (usb_supply_type != POWER_SUPPLY_TYPE_USB_DCP)
+		return;
+
+#ifdef CONFIG_HTC_BATT_WA_PCN0006
+	//checking for hard limit behavior
+	rc = smbchg_read(the_chip, &reg,
+				the_chip->chgr_base + FV_STS, 1);
+	if (rc)
+		pr_err("Failed to read FV state rc=%d\n", rc);
+	pr_smb(PR_STATUS, "FV status = %02x, Hard Limit = %d\n", reg, ((reg & FV_AICL_STS_BIT)!=0));
+	if (((reg & FV_AICL_STS_BIT) == 0) && (level > SKIP_HARD_LIMIT_CHECK_LEVEL)){
+		if (aicl_level > USB_MA_2000){
+			rc = vote(the_chip->usb_icl_votable, PSY_ICL_VOTER,
+				true, USB_MA_2000);
+			if (rc < 0) {
+				pr_err("Couldn't vote for ICL rc=%d\n", rc);
+				return;
+			}
+			pr_smb(PR_STATUS, "No Hard Limit, set AICL to 2000mA\n");
+		} else if (aicl_level > USB_MA_1500){
+			rc = vote(the_chip->usb_icl_votable, PSY_ICL_VOTER,
+				true, USB_MA_1500);
+			if (rc < 0) {
+				pr_err("Couldn't vote for ICL rc=%d\n", rc);
+				return;
+			}
+			pr_smb(PR_STATUS, "No Hard Limit, set AICL to 1500mA\n");
+		} else {
+			rc = vote(the_chip->usb_icl_votable, PSY_ICL_VOTER,
+				true, USB_MA_1000);
+			if (rc < 0) {
+				pr_err("Couldn't vote for ICL rc=%d\n", rc);
+				return;
+			}
+			pr_smb(PR_STATUS, "No Hard Limit, set as 1A adaptor\n");
+			g_is_charger_ability_detected = true;
+		}
+		smbchg_rerun_aicl(the_chip);
+		return;
+	}
+#endif //CONFIG_HTC_BATT_WA_PCN0006
+
+	/* Detect for 1A charger */
+	if (aicl_level <= USB_MA_1400){
+		rc = vote(the_chip->usb_icl_votable, PSY_ICL_VOTER,
+			true, USB_MA_1000);
+		if (rc < 0) {
+			pr_err("Couldn't vote for ICL rc=%d\n", rc);
+			return;
+		}
+		pr_smb(PR_STATUS, "1A adaptor detected\n");
+		g_is_charger_ability_detected = true;
+		smbchg_rerun_aicl(the_chip);
+		return;
+	}
+
+	return;
+}
+#endif //CONFIG_HTC_BATT_PCN0015
 /**
  * aicl_done_handler() - called when the usb AICL algorithm is finished
- *			and a current is set.
+ *                     and a current is set.
  */
 static irqreturn_t aicl_done_handler(int irq, void *_chip)
 {
@@ -9041,7 +8232,13 @@ static irqreturn_t aicl_done_handler(int irq, void *_chip)
 	bool usb_present = is_usb_present(chip);
 	int aicl_level = smbchg_get_aicl_level_ma(chip);
 
+#ifdef CONFIG_HTC_BATT_PCN0015
+	pr_smb(PR_INTERRUPT, "triggered, aicl: %d, vbus: %d\n", aicl_level, pmi8994_get_usbin_voltage_now());
+	if (!g_is_charger_ability_detected)
+		check_charger_ability(aicl_level);
+#else
 	pr_smb(PR_INTERRUPT, "triggered, aicl: %d\n", aicl_level);
+#endif //CONFIG_HTC_BATT_PCN0015
 
 	increment_aicl_count(chip);
 
@@ -9081,377 +8278,9 @@ static irqreturn_t usbid_change_handler(int irq, void *_chip)
 	return IRQ_HANDLED;
 }
 
-#ifdef CONFIG_LGE_PM_DEBUG
-#define CHG_STS_REG 0x4100
-#define CHG_STS 0x07
-#define STS_MASK (BIT(7) | BIT(6) | BIT(5))
-#define CHG_STS_SHIFT_BIT 5
-enum chg_state {
-	BATT_MISSING,
-	CHARGING_CV,
-	CHARGING_CC,
-	SYSTEM_FULL,
-	DIS_CHARGING,
-	AUTO_PRECHARGE,
-	SUPPLEMENTAL,
-	EMPTY,
-};
-
-static int smbchg_check_chg_state(struct smbchg_chip *chip) {
-	int rc;
-	u8 reg;
-	int status;
-
-	rc = smbchg_read(chip, &reg, CHG_STS_REG + CHG_STS, 1);
-	if (rc < 0) {
-		dev_err(chip->dev, "Unable to read CHGR_STS rc = %d\n", rc);
-		return 0;
-	}
-	status = (int)((reg & STS_MASK) >> CHG_STS_SHIFT_BIT);
-
-	return status;
-}
-
-#define CHGR_MASK	SMB_MASK(2, 1)
-#define CHGR_SHIFT 1
-enum chg_status {
-	DISCHARGING,
-	PRE_CHARGING,
-	FAST_CHARGING,
-	TAPER_CHARGING,
-};
-
-static int smbchg_check_chg_status(struct smbchg_chip *chip) {
-	int rc;
-	u8 reg;
-	int status;
-
-	rc = smbchg_read(chip, &reg, chip->chgr_base + CHGR_STS, 1);
-	if (rc < 0) {
-		dev_err(chip->dev, "Unable to read CHGR_STS rc = %d\n", rc);
-		return 0;
-	}
-	status = (int)((reg & CHGR_MASK) >> CHGR_SHIFT);
-
-	return status;
-}
-
-/* After test, make decision to delete or not */
-static void lgcc_charger_reginfo(struct work_struct *work) {
-	struct smbchg_chip *chip = container_of(work,
-		struct smbchg_chip, charging_info_work.work);
-	struct power_supply *parallel_psy = get_parallel_psy(chip);
-	int rc, batt_volt, batt_temp;
-	union power_supply_propval ret = {0, };
-	bool usb_present = is_usb_present(chip);
-	bool wireless_present = is_dc_present(chip);
-	int parallel_status = 0;
-	char *usb_type_name = "null";
-	char *cable_type_name = "NOT_INIT";
-	int usbin_vol = get_usb_adc(chip);
-	int pmi_iusb_aicl = 0;
-	int pmi_ibat_set = 0;
-	int smb_ibat_set = 0;
-	int batt_soc = 0;
-	int total_iusb_set = 0;
-	int batt_cur = 0;
-	int total_ibat = 0;
-	int smb_iusb = 0;
-	int chg_state_temp = 0;
-	char *chg_state = "null";
-	char *chg_type = "null";
-	char *chg_stage = "null";
-	bool safety_state = false;
-	int chg_enable = 0;
-	u8 reg;
-	int min_vote = 0;
-	int delay_time = 0;
-	int safety_status = 0;
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_ADC_QCT
-	struct lge_power *lge_adc_lpc;
-	union lge_power_propval lge_val = {0,};
-	int xo_therm = 0;
-	int pa0_therm = 0;
-	int board_therm = 0;
-	int vts_therm = 0;
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-	char *usb_ctype_name = "null";
-#endif
-	if (!chip->bms_psy || !chip->usb_psy || !parallel_psy) {
-		pr_smb(PR_LGE, "failed to get power_supply\n");
-		return;
-	}
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_ADC_QCT
-	if (!lge_adc_lpc)
-		lge_adc_lpc = lge_power_get_by_name("lge_adc");
-	if (!lge_adc_lpc) {
-		xo_therm = -1;
-		pa0_therm = -1;
-		board_therm = -1;
-	} else {
-		rc = lge_adc_lpc->get_property(lge_adc_lpc,
-				LGE_POWER_PROP_XO_THERM_PHY, &lge_val);
-		xo_therm = lge_val.intval;
-		rc = lge_adc_lpc->get_property(lge_adc_lpc,
-				LGE_POWER_PROP_PA0_THERM_PHY, &lge_val);
-		pa0_therm = lge_val.intval;
-		rc = lge_adc_lpc->get_property(lge_adc_lpc,
-				LGE_POWER_PROP_BD2_THERM_PHY, &lge_val);
-		board_therm = lge_val.intval;
-	}
-#ifdef CONFIG_MACH_MSM8996_LUCYE
-	vts_therm = (((xo_therm * VTS_WEIGHT_XO_TEMP)
-				+ (board_therm * VTS_WEIGHT_BD2_TEMP))
-			+ VTS_CONST_1) / VTS_WEIGHT_BY_PERCENT;
-#else
-	vts_therm = (((xo_therm * 470) + (board_therm * 300)) + 6800) * 10 / 1000;
-#endif
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	if (chip->lge_cd_lpc) {
-		rc = chip->lge_cd_lpc->get_property(chip->lge_cd_lpc,
-				LGE_POWER_PROP_CHARGING_ENABLED, &lge_val);
-		chg_enable = lge_val.intval;
-		rc = chip->lge_cd_lpc->get_property(chip->lge_cd_lpc,
-				LGE_POWER_PROP_CABLE_TYPE, &lge_val);
-		cable_type_name = lge_cable_type_str[lge_val.intval];
-	}
-#else
-	chg_enable = chip->chg_enabled;
-#endif
-
-	rc = parallel_psy->get_property(parallel_psy,
-		POWER_SUPPLY_PROP_STATUS, &ret);
-	if (rc < 0)
-		pr_smb(PR_LGE, "failed to read Parallel STATUS\n");
-	parallel_status = ret.intval;
-	if (wireless_present)
-		usb_type_name = "Wireless";
-	else if (chip->usb_supply_type) {
-		switch (chip->usb_supply_type) {
-			case POWER_SUPPLY_TYPE_USB:
-				usb_type_name = "SDP";
-				break;
-			case POWER_SUPPLY_TYPE_USB_CDP:
-				usb_type_name = "CDP";
-				break;
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_TYPE_HVDCP
-			case POWER_SUPPLY_TYPE_USB_HVDCP:
-				usb_type_name = "HVDCP";
-				break;
-			case POWER_SUPPLY_TYPE_USB_HVDCP_3:
-				usb_type_name = "HVDCP3";
-				break;
-#endif
-			case POWER_SUPPLY_TYPE_USB_DCP:
-				usb_type_name = "DCP";
-				if (chip->is_evp_ta)
-					usb_type_name = "EVP";
-				break;
-#ifdef CONFIG_LGE_USB_TYPE_C
-			case POWER_SUPPLY_TYPE_CTYPE:
-				usb_type_name = "Type-c";
-				break;
-			case POWER_SUPPLY_TYPE_CTYPE_PD:
-				usb_type_name = "Type-c pd";
-				break;
-#endif
-			default:
-				usb_type_name = "None";
-				break;
-		}
-	}
-
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-	get_property_from_typec(chip, POWER_SUPPLY_PROP_TYPE, &ret);
-	if (ret.intval == POWER_SUPPLY_TYPE_CTYPE)
-		usb_ctype_name = "Type-c";
-	else if (ret.intval == POWER_SUPPLY_TYPE_CTYPE_PD)
-		usb_ctype_name = "Type-c PD";
-	else
-		usb_ctype_name = "NONE";
-	pr_info("usb ctype is %d\n", ret.intval);
-#endif
-	min_vote = get_effective_result_locked(chip->fcc_votable);
-	total_ibat = chip->otp_ibat_current;
-	if (total_ibat == -EINVAL)
-		total_ibat = chip->cfg_fastchg_current_ma;
-	rc = chip->batt_psy.get_property(&chip->batt_psy,
-		POWER_SUPPLY_PROP_INPUT_CURRENT_MAX, &ret);
-	if (rc < 0)
-		pr_smb(PR_LGE, "failed to read PMI ICL\n");
-	pmi_iusb_aicl = ret.intval / 1000;
-
-	pmi_ibat_set = chip->fastchg_current_ma;
-
-	rc = parallel_psy->get_property(parallel_psy,
-		POWER_SUPPLY_PROP_CONSTANT_CHARGE_CURRENT_MAX, &ret);
-	if (rc < 0)
-		pr_smb(PR_LGE, "failed to read SMB IBAT\n");
-	smb_ibat_set = ret.intval / 1000;
-
-	rc = parallel_psy->get_property(parallel_psy,
-		POWER_SUPPLY_PROP_CURRENT_MAX, &ret);
-	if (rc < 0)
-		pr_smb(PR_LGE, "failed to read SMB IBAT\n");
-	smb_iusb = ret.intval / 1000;
-
-	rc = chip->batt_psy.get_property(&chip->batt_psy,
-		POWER_SUPPLY_PROP_CAPACITY, &ret);
-	if (rc < 0)
-		pr_smb(PR_LGE, "failed to read Battery SOC\n");
-	batt_soc = ret.intval;
-
-	rc = chip->usb_psy->get_property(chip->usb_psy,
-		POWER_SUPPLY_PROP_CURRENT_MAX, &ret);
-	if (rc < 0)
-		pr_smb(PR_LGE, "failed to read TOTAL IUSB\n");
-	total_iusb_set = ret.intval / 1000;
-
-	rc = chip->batt_psy.get_property(&chip->batt_psy,
-		POWER_SUPPLY_PROP_CURRENT_NOW, &ret);
-	if (rc < 0)
-		pr_smb(PR_LGE, "failed to read Total IBAT NOW\n");
-	batt_cur = ret.intval;
-
-	rc = chip->bms_psy->get_property(chip->bms_psy,
-		POWER_SUPPLY_PROP_VOLTAGE_NOW, &ret);
-	if (rc < 0)
-		pr_smb(PR_LGE, "failed to read Battery Volatge\n");
-	batt_volt = ret.intval / 1000;
-
-	rc = chip->bms_psy->get_property(chip->bms_psy,
-		POWER_SUPPLY_PROP_TEMP, &ret);
-	if (rc < 0)
-		pr_smb(PR_LGE, "failed to read Battery temperature\n");
-	batt_temp = ret.intval;
-
-	rc = smbchg_read(chip, &reg, chip->chgr_base + SFT_CFG, 1);
-	if (rc < 0)
-		dev_err(chip->dev, "Unable to read SFT_CFG rc = %d\n",
-				rc);
-	else if (!(reg & SFT_EN_MASK))
-		safety_state = false;
-	else
-		safety_state = true;
-
-	chg_state_temp = get_prop_batt_status(chip);
-	switch(chg_state_temp) {
-		case POWER_SUPPLY_STATUS_CHARGING :
-			chg_state = "CHARGING";
-			break;
-		case POWER_SUPPLY_STATUS_DISCHARGING :
-			chg_state = "DISCHARGING";
-			break;
-		case POWER_SUPPLY_STATUS_NOT_CHARGING :
-			chg_state = "NOTCHARGING";
-			break;
-		case POWER_SUPPLY_STATUS_FULL :
-			chg_state = "FULLCHARGING";
-			break;
-		default:
-			chg_state = "UNKNOWN";
-			break;
-	}
-	chg_state_temp = smbchg_check_chg_status(chip);
-	switch (chg_state_temp) {
-		case DISCHARGING:
-			chg_type = "DIS";
-			break;
-		case PRE_CHARGING:
-			chg_type = "PRE";
-			break;
-		case FAST_CHARGING:
-			if (chip->usb_present) {
-				if (chip->usb_supply_type == POWER_SUPPLY_TYPE_USB)
-					chg_type = "500MA";
-				else if (chip->usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP)
-					chg_type = "NORMAL";
-				else if (chip->usb_supply_type == POWER_SUPPLY_TYPE_USB_HVDCP ||
-						chip->usb_supply_type == POWER_SUPPLY_TYPE_USB_HVDCP_3)
-					chg_type = "FAST";
-			} else
-				chg_type = "UNKNOWN";
-
-			break;
-		case TAPER_CHARGING:
-			chg_type = "TAPER";
-			break;
-		default:
-			chg_type = "FULL";
-			break;
-	}
-	chg_state_temp = smbchg_check_chg_state(chip);
-	switch (chg_state_temp) {
-		case CHARGING_CV:
-			chg_stage = "CV";
-			break;
-		case CHARGING_CC:
-			chg_stage = "CC";
-			break;
-		default:
-			chg_stage = "NONE";
-			break;
-	}
-
-	if (safety_state && chip->usb_present) {
-		if (chip->bms_psy_name) {
-			if (!chip->bms_psy)
-				chip->bms_psy =
-					power_supply_get_by_name((char *)chip->bms_psy_name);
-			if (chip->bms_psy) {
-				chip->bms_psy->get_property(chip->bms_psy,
-						POWER_SUPPLY_PROP_SAFETY_TIMER_EXPIRED,
-						&ret);
-				if (ret.intval)
-					safety_status = true;
-				else
-					safety_status = false;
-			}
-		}
-	} else
-		safety_status = false;
-
-	pr_info ("[STATUS] USB_PRESENT[%d], PARALLEL_STATUS[%d], USB_TYPE[%s]\n",
-			usb_present, parallel_status, usb_type_name);
-	if (usb_present) {
-		pr_info("[STATUS] TOTAL_IUSB[%d], PMI_IUSB[%d], SMB_IUSB[%d]\n",
-				total_iusb_set, pmi_iusb_aicl, smb_iusb);
-		pr_info("[STATUS] TOTAL_IBAT[%d/%d(vote)], PMI_IBAT[%d], SMB_IBAT[%d]\n",
-				total_ibat, min_vote, pmi_ibat_set, smb_ibat_set);
-		pr_info ("[STATUS] CABLE_ID [%s], CABLE_INFO[%s], USBIN_VOL[%d]\n",
-				cable_type_name, usb_type_name, usbin_vol);
-	}
-	pr_info ("[STATUS] BATT_SOC[%d], BATT_VOL[%d], BATT_TEMP[%d], BATT_CUR[%d]\n",
-			batt_soc, batt_volt, batt_temp, batt_cur);
-	pr_info ("[STATUS] CHG_EN[%s], CHG_STATE[%s/%s/%s], SAFETY_STATE[%s/%s]\n",
-			chg_enable ? "Enable" : "Disable", chg_state, chg_type, chg_stage,
-			safety_state ? "Set" : "Not Set", safety_status ? "Operated" : "Not yet");
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_ADC_QCT
-	pr_info ("[STATUS] XO_tHERM[%d], PA_THERM[%d], BOARD_THERM[%d] VTS[%d]\n",
-			xo_therm, pa0_therm, board_therm, vts_therm);
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-	pr_info("[STATUS] IUSB_MAX[%d], USB_CTYPE[%s]\n",
-			chip->usb_max_current_ma, usb_ctype_name);
-#endif
-	if (chip->usb_present)
-		delay_time = CHARGING_INFORM_NORMAL_TIME / 2;
-	else
-		delay_time = CHARGING_INFORM_NORMAL_TIME;
-
-		schedule_delayed_work(&chip->charging_info_work,
-			round_jiffies_relative(msecs_to_jiffies(delay_time)));
-
-}
-#endif
-
 static int determine_initial_status(struct smbchg_chip *chip)
 {
-#if !defined(CONFIG_LGE_USB_TYPE_C) || defined(CONFIG_LGE_USB_TUSB422)
 	union power_supply_propval type = {0, };
-#endif
 
 	/*
 	 * It is okay to read the interrupt status here since
@@ -9461,22 +8290,16 @@ static int determine_initial_status(struct smbchg_chip *chip)
 	 */
 
 	batt_pres_handler(0, chip);
-#ifndef CONFIG_LGE_PM
 	batt_hot_handler(0, chip);
 	batt_warm_handler(0, chip);
 	batt_cool_handler(0, chip);
 	batt_cold_handler(0, chip);
-#endif
-#if defined(CONFIG_LGE_USB_TYPE_C) && !defined(CONFIG_LGE_USB_TUSB422)
-	usbid_change_handler(0, chip);
-#else
 	if (chip->typec_psy) {
 		get_property_from_typec(chip, POWER_SUPPLY_PROP_TYPE, &type);
 		update_typec_otg_status(chip, type.intval, true);
 	} else {
 		usbid_change_handler(0, chip);
 	}
-#endif
 
 	chip->usb_present = is_usb_present(chip);
 	chip->dc_present = is_dc_present(chip);
@@ -9571,8 +8394,6 @@ static inline int get_bpd(const char *name)
 #define VFLOAT_COMP_ENABLE_MASK		SMB_MASK(2, 0)
 #define TR_RID_REG			0xFA
 #define FG_INPUT_FET_DELAY_BIT		BIT(3)
-#define TRIM_OPTIONS_7_0		0xF6
-#define INPUT_MISSING_POLLER_EN_BIT	BIT(3)
 #define CHGR_CCMP_CFG			0xFA
 #define JEITA_TEMP_HARD_LIMIT_BIT	BIT(5)
 #define HVDCP_ADAPTER_SEL_MASK		SMB_MASK(5, 4)
@@ -9588,21 +8409,6 @@ static inline int get_bpd(const char *name)
 #define OTG_PIN_CTRL_RID_DIS		0x04
 #define OTG_CMD_CTRL_RID_EN		0x08
 #define AICL_ADC_BIT			BIT(6)
-
-#ifdef CONFIG_LGE_PM_FACTORY_CABLE
-#define CHGR_TRIM_OPTIONS_15_8          0xf5
-#define AICL_WL_CFG                     0xf5
-#define USBIN_RERUN_AICL_MASK           BIT(5)
-#define USBIN_RERUN_AICL                BIT(5)
-#define AICL_ADC_FUNCTION               BIT(6)
-#define AICL_ICL_VALUE                  BIT(7)
-#endif
-
-#ifdef CONFIG_LGE_USB_BC_12_VZW
-#define VBL_SEL_CFG 		0xF2
-#define VBAT_LOW_SRC 			BIT(0)
-#endif
-
 static void batt_ov_wa_check(struct smbchg_chip *chip)
 {
 	int rc;
@@ -9647,6 +8453,11 @@ static void batt_ov_wa_check(struct smbchg_chip *chip)
 	}
 }
 
+#ifdef CONFIG_HTC_BATT
+#define CHG_CURRENT_COMP_EN_MASK	SMB_MASK(1, 0)
+#define DC_AICL_CFG2 0xF4
+#define DC_USB_AICL_THRESHOLD_5V BIT(0)
+#endif //CONFIG_HTC_BATT
 static int smbchg_hw_init(struct smbchg_chip *chip)
 {
 	int rc, i;
@@ -9664,7 +8475,15 @@ static int smbchg_hw_init(struct smbchg_chip *chip)
 			chip->revision[ANA_MAJOR], chip->revision[ANA_MINOR]);
 
 	/* Setup 9V HVDCP */
-	if (!chip->hvdcp_not_supported) {
+	if (chip->hvdcp_not_supported) {
+		rc = vote(chip->hvdcp_enable_votable, HVDCP_PMIC_VOTER,
+				true, 0);
+		if (rc < 0) {
+			dev_err(chip->dev, "Couldn't disable HVDCP rc=%d\n",
+					rc);
+			return rc;
+		}
+	} else {
 		rc = smbchg_sec_masked_write(chip,
 				chip->usb_chgpth_base + CHGPTH_CFG,
 				HVDCP_ADAPTER_SEL_MASK, HVDCP_9V);
@@ -9693,39 +8512,30 @@ static int smbchg_hw_init(struct smbchg_chip *chip)
 		return rc;
 	}
 
+#ifdef CONFIG_HTC_BATT_WA_PCN0010
+	rc = smbchg_sec_masked_write(chip, chip->misc_base + TRIM_OPTIONS_7_0,
+			INPUT_MISSING_POLLER_EN_BIT, INPUT_MISSING_POLLER_EN_BIT);
+#else
 	rc = smbchg_sec_masked_write(chip, chip->misc_base + TRIM_OPTIONS_7_0,
 			INPUT_MISSING_POLLER_EN_BIT,
-			INPUT_MISSING_POLLER_EN_BIT);
+            INPUT_MISSING_POLLER_EN_BIT);
+#endif //CONFIG_HTC_BATT_WA_PCN0010
 	if (rc < 0) {
 		dev_err(chip->dev, "Couldn't enable input missing poller rc=%d\n",
 				rc);
 		return rc;
 	}
 
-#ifdef CONFIG_LGE_PM_FACTORY_CABLE
-	/*
-	 * force using current from the register i.e. ignore auto
-	 * power source detect (APSD) mA ratings
-	 * Only for Factory Cable Mode
-	 */
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-#ifdef CONFIG_LGE_USB_TYPE_C
-	if (!chip->dp_alt_mode && is_factory_cable(chip)) {
-#else
-	if (is_factory_cable(chip)) {
-#endif
-		rc = smbchg_masked_write(chip, chip->usb_chgpth_base + CMD_IL,
-			USE_REGISTER_FOR_CURRENT, USE_REGISTER_FOR_CURRENT);
-	} else {
-		rc = smbchg_masked_write(chip, chip->usb_chgpth_base + CMD_IL,
-			USE_REGISTER_FOR_CURRENT, 0);
-
-		rc = smbchg_sec_masked_write(chip, chip->misc_base +
-			CHGR_TRIM_OPTIONS_15_8,
-			USBIN_RERUN_AICL_MASK, USBIN_RERUN_AICL);
+#ifdef CONFIG_HTC_BATT
+	/*Set VINMIN to 4.25V*/
+	rc = smbchg_sec_masked_write(chip,
+		chip->dc_chgpth_base + DC_AICL_CFG2, DC_USB_AICL_THRESHOLD_5V, 0);
+	if (rc) {
+		pr_err("Couldn't write to DC_AICL_CFG2 rc=%d\n", rc);
+		return rc;
 	}
 #endif
-#else
+
 	/*
 	 * Do not force using current from the register i.e. use auto
 	 * power source detect (APSD) mA ratings for the initial current values.
@@ -9734,7 +8544,6 @@ static int smbchg_hw_init(struct smbchg_chip *chip)
 	 */
 	rc = smbchg_masked_write(chip, chip->usb_chgpth_base + CMD_IL,
 			USE_REGISTER_FOR_CURRENT, 0);
-#endif
 
 	if (rc < 0) {
 		dev_err(chip->dev, "Couldn't set input limit cmd rc=%d\n", rc);
@@ -9778,13 +8587,8 @@ static int smbchg_hw_init(struct smbchg_chip *chip)
 			TERM_I_SRC_BIT | RECHG_THRESHOLD_SRC_BIT,
 			TERM_SRC_FG | RECHG_THRESHOLD_SRC_BIT);
 	else
-#ifdef CONFIG_LGE_PM
-		rc = smbchg_sec_masked_write(chip, chip->chgr_base + CHGR_CFG1,
-			TERM_I_SRC_BIT, TERM_SRC_FG);
-#else
 		rc = smbchg_sec_masked_write(chip, chip->chgr_base + CHGR_CFG1,
 			TERM_I_SRC_BIT | RECHG_THRESHOLD_SRC_BIT, 0);
-#endif
 
 	if (rc < 0) {
 		dev_err(chip->dev, "Couldn't set chgr_cfg2 rc=%d\n", rc);
@@ -9801,6 +8605,29 @@ static int smbchg_hw_init(struct smbchg_chip *chip)
 		dev_err(chip->dev, "Couldn't set usb_chgpth cfg rc=%d\n", rc);
 		return rc;
 	}
+
+#ifdef CONFIG_HTC_BATT_WA_PCN0017
+	smbchg_set_hvdcp_enable(chip, false);
+#else
+	#ifdef CONFIG_HTC_BATT_WA_PCN0002
+		if (!(get_kernel_flag() & KERNEL_FLAG_DISABLE_SAFETY_TIMER)
+			&& (chip->htc_wa_flags & HTC_DISABLE_QC2_QC3_WA)) {
+			//Disable QC2.0
+			rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + CHGPTH_CFG,
+				HVDCP_EN_BIT, 0);
+			if (rc < 0) {
+				dev_err(chip->dev, "Couldn't set usb_chgpth cfg disable qc20 rc=%d\n", rc);
+			}
+		} else {
+			//Enable QC2.0
+			rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + CHGPTH_CFG,
+				HVDCP_EN_BIT, HVDCP_EN_BIT);
+			if (rc < 0) {
+				dev_err(chip->dev, "Couldn't set usb_chgpth cfg disable qc20 rc=%d\n", rc);
+			}
+		}
+	#endif //CONFIG_HTC_BATT_WA_PCN0002
+#endif //CONFIG_HTC_BATT_WA_PCN0017
 
 	check_battery_type(chip);
 
@@ -9827,6 +8654,16 @@ static int smbchg_hw_init(struct smbchg_chip *chip)
 		pr_smb(PR_STATUS, "set fastchg current comp to %d\n",
 			chip->fastchg_current_comp);
 	}
+#ifdef CONFIG_HTC_BATT
+	/* Disable fast charge current compensation */
+	rc = smbchg_sec_masked_write(chip, chip->chgr_base + CHGR_CCMP_CFG,
+			CHG_CURRENT_COMP_EN_MASK, 0);
+
+	if (rc < 0) {
+		dev_err(chip->dev, "Couldn't disable chg_current_comp rc=%d\n", rc);
+		return rc;
+	}
+#endif //CONFIG_HTC_BATT
 
 	/* set the float voltage compensation */
 	if (chip->float_voltage_comp != -EINVAL) {
@@ -9986,6 +8823,21 @@ static int smbchg_hw_init(struct smbchg_chip *chip)
 		}
 	}
 
+#ifdef CONFIG_HTC_BATT_PCN0006
+	/* debug flag 6 4 set, disable hw soft/hard temp monitor */
+	if (get_kernel_flag() & KERNEL_FLAG_KEEP_CHARG_ON) {
+		reg = TEMP_MONITOR_DISABLE_BIT |
+			JEITA_TEMP_HARD_LIMIT_DISABLE_BIT | HOT_COLD_SL_COMP_BITS;
+		rc = smbchg_sec_masked_write(chip, chip->chgr_base + CHGR_CCMP_CFG,
+			HARD_TEMP_MASK | SOFT_TEMP_MASK, reg);
+				if (rc < 0) {
+			dev_err(chip->dev, "Couldn't disable hw soft/hard temp monitor = %d\n",
+				rc);
+			return rc;
+		}
+	}
+#endif //CONFIG_HTC_BATT_PCN0006
+
 	/* DC path current settings */
 	if (chip->dc_psy_type != -EINVAL) {
 		rc = vote(chip->dc_icl_votable, PSY_ICL_VOTER, true,
@@ -9997,10 +8849,6 @@ static int smbchg_hw_init(struct smbchg_chip *chip)
 		}
 	}
 
-#ifdef CONFIG_LGE_PM_PSEUDO_BATTERY
-	rc = smbchg_read(chip, &reg, chip->bat_if_base + VBL_CFG, 1);
-	chip->vbat_low_thr = reg & VBL_MASK;
-#endif
 
 	/*
 	 * on some devices the battery is powered via external sources which
@@ -10018,18 +8866,27 @@ static int smbchg_hw_init(struct smbchg_chip *chip)
 			return rc;
 		}
 	}
-#ifdef CONFIG_LGE_PM_FACTORY_CABLE
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	if (is_factory_cable(chip)) {
-		rc = vote(chip->fcc_votable, PIF_FCC_VOTER, true,
-			FACTORY_FCC_MA);
-		if (rc < 0) {
-			dev_err(chip->dev, "Couldn't vote fastchg ma rc = %d\n", rc);
-			return rc;
-		}
+
+#ifdef CONFIG_HTC_BATT_WA_PCN0014
+// Always keep 1MHz
+#define BAT_IF_TRIM7_REG    0xF7
+#define CFG_750KHZ_BIT      BIT(1)
+#define MISC_CFG_NTC_VOUT_REG   0xF3
+#define CFG_NTC_VOUT_FSW_BIT    BIT(0)
+
+	chip->htc_wa_flags |= HTC_FORCE_FSW_1MHZ_WA;
+	rc = smbchg_sec_masked_write(chip, chip->misc_base + MISC_CFG_NTC_VOUT_REG, CFG_NTC_VOUT_FSW_BIT, CFG_NTC_VOUT_FSW_BIT);
+	if (rc < 0) {
+		dev_err(chip->dev, "Couldn't set switching frequency multiplier rc=%d\n", rc);
+		return rc;
 	}
-#endif
-#endif
+	rc = smbchg_sec_masked_write(chip, chip->bat_if_base + BAT_IF_TRIM7_REG, CFG_750KHZ_BIT, 0);
+	if (rc < 0) {
+		dev_err(chip->dev, "Cannot set switching freq: %d\n", rc);
+		return rc;
+	}
+#endif //CONFIG_HTC_BATT_WA_PCN0014
+
 	rc = vote(chip->fcc_votable, BATT_TYPE_FCC_VOTER, true,
 			chip->cfg_fastchg_current_ma);
 	if (rc < 0) {
@@ -10099,40 +8956,6 @@ static int smbchg_hw_init(struct smbchg_chip *chip)
 	if (rc)
 		pr_err("Couldn't write to MISC_TRIM_OPTIONS_15_8 rc=%d\n",
 			rc);
-
-#ifdef CONFIG_LGE_USB_BC_12_VZW
-	if (!lge_get_factory_boot()) {
-		/* set DCD Timeout Dealy as 300ms */
-		rc = smbchg_sec_masked_write(chip,
-			chip->bat_if_base + VBL_SEL_CFG, VBAT_LOW_SRC, 1);
-		if (rc < 0)
-			dev_err(chip->dev, "Couldn't set DCD Timeout Delay rc = %d\n", rc);
-	}
-#endif
-
-#ifdef CONFIG_LGE_PM
-	/* enable APSD */
-	pr_smb(PR_MISC, "Enabling APSD\n");
-	rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + APSD_CFG,
-				AUTO_SRC_DETECT_EN_BIT, AUTO_SRC_DETECT_EN_BIT);
-	if (rc < 0) {
-		pr_err("Couldn't enable APSD rc=%d\n", rc);
-		return rc;
-	}
-#endif
-#ifdef CONFIG_LGE_PM_VFLOAT_TRIM_RESTORE
-	/* save initial VFLOAT_TRIM register */
-	rc = smbchg_read(chip, &reg, chip->misc_base + TRIM_14, 1);
-	if (rc < 0){
-		dev_err(chip->dev, "Unable to read trim 14: %d\n", rc);
-		chip->initial_vfloat_trim_reg = 0xE0; //default TRIM_14 value
-	}
-	chip->initial_vfloat_trim_reg = reg;
-	chip->vfloat_trim_restore_status = false;
-	pr_smb(PR_STATUS, "Initial VFLOAT_TRIM reg = 0x%x\n",
-		chip->initial_vfloat_trim_reg);
-#endif
 
 	rc = configure_icl_control(chip, ICL_BUF_SYSON_LDO_VAL);
 	if (rc)
@@ -10340,17 +9163,6 @@ static int smb_parse_dt(struct smbchg_chip *chip)
 			chip->parallel.min_9v_current_thr_ma);
 	OF_PROP_READ(chip, chip->jeita_temp_hard_limit,
 			"jeita-temp-hard-limit", rc, 1);
-#ifdef CONFIG_LGE_PM
-	of_property_read_u32(chip->spmi->dev.of_node,
-					"qcom,default-hvdcp-icl-ma",
-					&smbchg_default_hvdcp_icl_ma);
-	of_property_read_u32(chip->spmi->dev.of_node,
-					"qcom,default-hvdcp3-icl-ma",
-					&smbchg_default_hvdcp3_icl_ma);
-	of_property_read_u32(chip->spmi->dev.of_node,
-					"qcom,maximum-icl-ma",
-					&chip->maximum_icl_ma);
-#endif
 	OF_PROP_READ(chip, chip->aicl_rerun_period_s,
 			"aicl-rerun-period-s", rc, 1);
 	OF_PROP_READ(chip, chip->vchg_adc_channel,
@@ -10562,7 +9374,6 @@ static int smbchg_request_irqs(struct smbchg_chip *chip)
 			break;
 		case SMBCHG_BAT_IF_SUBTYPE:
 		case SMBCHG_LITE_BAT_IF_SUBTYPE:
-#ifndef CONFIG_LGE_PM
 			REQUEST_IRQ(chip, spmi_resource, chip->batt_hot_irq,
 				"batt-hot", batt_hot_handler, flags, rc);
 			REQUEST_IRQ(chip, spmi_resource, chip->batt_warm_irq,
@@ -10571,17 +9382,14 @@ static int smbchg_request_irqs(struct smbchg_chip *chip)
 				"batt-cool", batt_cool_handler, flags, rc);
 			REQUEST_IRQ(chip, spmi_resource, chip->batt_cold_irq,
 				"batt-cold", batt_cold_handler, flags, rc);
-#endif
 			REQUEST_IRQ(chip, spmi_resource, chip->batt_missing_irq,
 				"batt-missing", batt_pres_handler, flags, rc);
 			REQUEST_IRQ(chip, spmi_resource, chip->vbat_low_irq,
 				"batt-low", vbat_low_handler, flags, rc);
-#ifndef CONFIG_LGE_PM
 			enable_irq_wake(chip->batt_hot_irq);
 			enable_irq_wake(chip->batt_warm_irq);
 			enable_irq_wake(chip->batt_cool_irq);
 			enable_irq_wake(chip->batt_cold_irq);
-#endif
 			enable_irq_wake(chip->batt_missing_irq);
 			enable_irq_wake(chip->vbat_low_irq);
 			break;
@@ -10759,6 +9567,81 @@ static void dump_regs(struct smbchg_chip *chip)
 {
 	u16 addr;
 
+#ifdef CONFIG_HTC_BATT
+	/* charger peripheral */
+	for (addr = 0x4; addr <= 0xE; addr++)
+			dump_reg(chip, chip->chgr_base + addr, "CHGR");
+	for (addr = 0x10; addr <= 0x1B; addr++)
+			dump_reg(chip, chip->chgr_base + addr, "CHGR");
+	for (addr = 0xD9; addr <= 0xDF; addr++)
+			dump_reg(chip, chip->chgr_base + addr, "CHGR");
+	for (addr = 0xE0; addr <= 0xE7; addr++)
+			dump_reg(chip, chip->chgr_base + addr, "CHGR");
+	for (addr = 0xF0; addr <= 0xFF; addr++)
+			dump_reg(chip, chip->chgr_base + addr, "CHGR");
+	/* OTG peripheral */
+	for (addr = 0x4; addr <= 0x5; addr++)
+			dump_reg(chip, chip->otg_base + addr, "OTG");
+	for (addr = 0x10; addr <= 0x1B; addr++)
+			dump_reg(chip, chip->otg_base + addr, "OTG");
+	for (addr = 0xD9; addr <= 0xDF; addr++)
+			dump_reg(chip, chip->otg_base + addr, "OTG");
+	for (addr = 0xE0; addr <= 0xEF; addr++)
+			dump_reg(chip, chip->otg_base + addr, "OTG");
+	for (addr = 0xF0; addr <= 0xFF; addr++)
+			dump_reg(chip, chip->otg_base + addr, "OTG");
+	/* battery interface peripheral */
+	for (addr = 0x4; addr <= 0x8; addr++)
+			dump_reg(chip, chip->bat_if_base + addr, "BAT_IF");
+	for (addr = 0x10; addr <= 0x1B; addr++)
+			dump_reg(chip, chip->bat_if_base + addr, "BAT_IF");
+	for (addr = 0x40; addr <= 0x43; addr++)
+			dump_reg(chip, chip->bat_if_base + addr, "BAT_IF");
+	for (addr = 0xD9; addr <= 0xDF; addr++)
+			dump_reg(chip, chip->bat_if_base + addr, "BAT_IF");
+	for (addr = 0xE0; addr <= 0xE1; addr++)
+			dump_reg(chip, chip->bat_if_base + addr, "BAT_IF");
+	for (addr = 0xF0; addr <= 0xFF; addr++)
+			dump_reg(chip, chip->bat_if_base + addr, "BAT_IF");
+	/* usb charge path peripheral */
+	for (addr = 0x4; addr <= 0xF; addr++)
+			dump_reg(chip, chip->usb_chgpth_base + addr, "USB");
+	for (addr = 0x10; addr <= 0x1B; addr++)
+			dump_reg(chip, chip->usb_chgpth_base + addr, "USB");
+	for (addr = 0x40; addr <= 0x43; addr++)
+			dump_reg(chip, chip->usb_chgpth_base + addr, "USB");
+	for (addr = 0xD9; addr <= 0xDF; addr++)
+			dump_reg(chip, chip->usb_chgpth_base + addr, "USB");
+	for (addr = 0xE0; addr <= 0xE5; addr++)
+			dump_reg(chip, chip->usb_chgpth_base + addr, "USB");
+	for (addr = 0xF0; addr <= 0xFF; addr++)
+			dump_reg(chip, chip->usb_chgpth_base + addr, "USB");
+	/* dc charge path peripheral */
+	for (addr = 0x4; addr <= 0x5; addr++)
+		dump_reg(chip, chip->dc_chgpth_base + addr, "DC");
+	for (addr = 0x10; addr <= 0x1B; addr++)
+		dump_reg(chip, chip->dc_chgpth_base + addr, "DC");
+	for (addr = 0xD9; addr <= 0xDF; addr++)
+		dump_reg(chip, chip->dc_chgpth_base + addr, "DC");
+	for (addr = 0xE0; addr <= 0xE2; addr++)
+		dump_reg(chip, chip->dc_chgpth_base + addr, "DC");
+	for (addr = 0xF0; addr <= 0xFF; addr++)
+		dump_reg(chip, chip->dc_chgpth_base + addr, "DC");
+	/* misc peripheral */
+	for (addr = 0x0; addr <= 0x8; addr++)
+		dump_reg(chip, chip->misc_base + addr, "MISC");
+	for (addr = 0x10; addr <= 0x1B; addr++)
+		dump_reg(chip, chip->misc_base + addr, "MISC");
+	for (addr = 0x40; addr <= 0x42; addr++)
+		dump_reg(chip, chip->misc_base + addr, "MISC");
+	for (addr = 0xD9; addr <= 0xDF; addr++)
+		dump_reg(chip, chip->misc_base + addr, "MISC");
+	for (addr = 0xE0; addr <= 0xEF; addr++)
+		dump_reg(chip, chip->misc_base + addr, "MISC");
+	for (addr = 0xF0; addr <= 0xFF; addr++)
+		dump_reg(chip, chip->misc_base + addr, "MISC");
+
+#else
 	/* charger peripheral */
 	for (addr = 0xB; addr <= 0x10; addr++)
 		dump_reg(chip, chip->chgr_base + addr, "CHGR Status");
@@ -10784,6 +9667,7 @@ static void dump_regs(struct smbchg_chip *chip)
 	dump_reg(chip, chip->misc_base + RT_STS, "MISC Status");
 	for (addr = 0xF0; addr <= 0xF3; addr++)
 		dump_reg(chip, chip->misc_base + addr, "MISC CFG");
+#endif //CONFIG_HTC_BATT
 }
 
 static int create_debugfs_entries(struct smbchg_chip *chip)
@@ -10867,7 +9751,13 @@ static int smbchg_check_chg_version(struct smbchg_chip *chip)
 		chip->wa_flags |= SMBCHG_CC_ESR_WA
 				| SMBCHG_FLASH_ICL_DISABLE_WA
 				| SMBCHG_RESTART_WA
-				| SMBCHG_FLASH_BUCK_SWITCH_FREQ_WA;
+                | SMBCHG_FLASH_BUCK_SWITCH_FREQ_WA;
+#ifdef CONFIG_HTC_BATT_WA_PCN0002
+		pr_info("PMI8996 version:%d\n", pmic_rev_id->rev3);
+		if (pmic_rev_id->rev3 == 0) /* PMI8996 1.0 */ {
+			chip->htc_wa_flags |= HTC_DISABLE_QC2_QC3_WA;
+		}
+#endif //CONFIG_HTC_BATT_WA_PCN0002
 		use_pmi8996_tables(chip);
 		chip->schg_version = QPNP_SCHG;
 		break;
@@ -10883,75 +9773,800 @@ static int smbchg_check_chg_version(struct smbchg_chip *chip)
 	return 0;
 }
 
+#ifdef CONFIG_HTC_BATT_PCN0016
+static int set_property_on_htcchg(struct smbchg_chip *chip,
+		enum power_supply_property prop, int val)
+{
+	int rc;
+	union power_supply_propval ret = {0, };
+
+	if (!chip->htcchg_psy) {
+		chip->htcchg_psy = power_supply_get_by_name("htcchg");
+	}
+
+	if (!chip->htcchg_psy) {
+		return -EINVAL;
+	}
+
+	ret.intval = val;
+	rc = chip->htcchg_psy->set_property(chip->htcchg_psy, prop, &ret);
+	if (rc)
+		pr_smb(PR_STATUS, "htcchg psy does not allow updating prop %d rc = %d\n", prop, rc);
+	return rc;
+
+}
+
+#ifdef CONFIG_HTC_BATT_PCN0009
+static int get_property_from_htcchg(struct smbchg_chip *chip,
+		enum power_supply_property prop, int *val)
+{
+	int rc;
+	union power_supply_propval ret = {0, };
+
+	if (!chip->htcchg_psy) {
+		chip->htcchg_psy = power_supply_get_by_name("htcchg");
+	}
+
+	if (!chip->htcchg_psy) {
+		return -EINVAL;
+	}
+
+	rc = chip->htcchg_psy->get_property(chip->htcchg_psy, prop, &ret);
+	if (rc) {
+		pr_smb(PR_STATUS, "htcchg psy doesn't support reading prop %d rc = %d\n", prop, rc);
+		return rc;
+	}
+
+	*val = ret.intval;
+	return rc;
+}
+
+static int pmi8994_get_htc_chg_ext_mode(void)
+{
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return -EINVAL;
+	}
+
+	return the_chip->htcchg_ext_mode;
+}
+
+static int pmi8994_get_htc_chg_en(void)
+{
+	int rc = 0;
+	int value = 0;
+
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return -EINVAL;
+	}
+
+	rc = get_property_from_htcchg(the_chip, POWER_SUPPLY_PROP_CHARGE_ENABLED, &value);
+	if (rc) {
+		value = 0;
+	}
+	return value;
+}
+
+static int pmi8994_get_htc_chg_usb_in_isen_ma(void)
+{
+	int rc = 0;
+	int value = 0;
+
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return -EINVAL;
+	}
+
+	rc = get_property_from_htcchg(the_chip, POWER_SUPPLY_PROP_CHARGE_NOW, &value);
+	if (rc) {
+		value = 0;
+	}
+	return value;
+}
+
+
+static int pmi8994_get_htc_chg_usb_in_isen_adc(void)
+{
+	int rc = 0;
+	int value = 0;
+
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return -EINVAL;
+	}
+
+	rc = get_property_from_htcchg(the_chip, POWER_SUPPLY_PROP_CHARGE_NOW_RAW, &value);
+	if (rc) {
+		value = 0;
+	}
+	return value;
+}
+
+static int pmi8994_get_htc_chg_vbusdet_adc(void)
+{
+	int rc = 0;
+	int value = 0;
+
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return -EINVAL;
+	}
+
+	rc = get_property_from_htcchg(the_chip, POWER_SUPPLY_PROP_VOLTAGE_NOW, &value);
+	if (rc) {
+		value = 0;
+	}
+	return value;
+}
+
+int pmi8994_get_htc_chg_usb_pwr_temp_adc(void)
+{
+	int rc = 0;
+	int value1 = 0;
+	int value2 = 0;
+	int value3 = 0;
+
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return -EINVAL;
+	}
+
+	rc = get_property_from_htcchg(the_chip, POWER_SUPPLY_PROP_TEMP, &value1);
+	if (rc) {
+		value1 = 0;
+	}
+	msleep (5);
+	rc = get_property_from_htcchg(the_chip, POWER_SUPPLY_PROP_TEMP, &value2);
+	if (rc) {
+		value2 = 0;
+	}
+	msleep (5);
+	rc = get_property_from_htcchg(the_chip, POWER_SUPPLY_PROP_TEMP, &value3);
+	if (rc) {
+		value3 = 0;
+	}
+
+	return (value1 + value2 + value3)/3;
+}
+#endif //CONFIG_HTC_BATT_PCN0009
+
+static int pmi8994_set_htc_chg_charging_enabled(int value)
+{
+	int rc = 0;
+
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return -EINVAL;
+	}
+
+	pr_smb(PR_STATUS, "pmi8994_set_htc_chg_charging_enabled: %d\n", value);
+	rc = set_property_on_htcchg(the_chip, POWER_SUPPLY_PROP_CHARGING_ENABLED, value);
+	return rc;
+}
+
+static int pmi8994_set_htc_chg_flash_active(int value)
+{
+	int rc = 0;
+
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return -EINVAL;
+	}
+
+	pr_smb(PR_STATUS, "pmi8994_set_htc_chg_flash_active: %d\n", value);
+	rc = set_property_on_htcchg(the_chip, POWER_SUPPLY_PROP_FLASH_ACTIVE, value);
+	return rc;
+}
+
+#endif //CONFIG_HTC_BATT_PCN0016
+
+#ifdef CONFIG_HTC_BATT
+#ifdef CONFIG_HTC_BATT_PCN0018
+int request_charger_status(enum htc_charger_request mode, void *ret_buf)
+{
+	int ret = -1;
+	switch(mode)
+	{
+#ifdef CONFIG_HTC_BATT_PCN0015
+		case CHARGER_ABILITY_DETECT_DONE:
+			pr_info("Hvdcp detect is done.\n");
+			ret = g_is_charger_ability_detected ? 1 : 0;
+			break;
+		case CHARGER_5V_2A_DETECT_DONE:
+			ret = g_is_5v_2a_detected ? 1 : 0;
+			break;
+#endif //CONFIG_HTC_BATT_PCN0015
+		default:
+			pr_info("The reqeust is not supported.\n");
+			break;
+	}
+	return ret;
+}
+
+void impedance_set_iusb_max (int current_ua, bool mode)
+{
+        int rc;
+        rc = vote(the_chip->usb_icl_votable, USER_ICL_VOTER,
+                        mode, current_ua / 1000);
+        pr_smb(PR_STATUS, "set iusb max = %d\n",current_ua / 1000);
+        if (rc < 0) {
+                pr_err("Can't vote %d current limit rc=%d\n",
+                        current_ua, rc);
+        }
+}
+#endif //CONFIG_HTC_BATT_PCN0018
+
+#if defined(CONFIG_HTC_BATT_PCN0018)||defined(CONFIG_HTC_BATT_PCN0015)||defined(CONFIG_HTC_BATT_PCN0020)
+void set_aicl_enable(bool bEnable)
+{
+        if(!the_chip) {
+                pr_err("called before init\n");
+                return;
+	}
+
+	if(bEnable){
+                pr_info("Enable AICL...\n");
+                smbchg_sec_masked_write(the_chip, the_chip->usb_chgpth_base + USB_AICL_CFG,
+                         AICL_EN_BIT, AICL_EN_BIT);
+	}else{
+		pr_info("Disable AICL...\n");
+		smbchg_sec_masked_write(the_chip, the_chip->usb_chgpth_base + USB_AICL_CFG,
+                        AICL_EN_BIT, 0);
+	}
+}
+#endif //CONFIG_HTC_BATT_PCN0018/PCN0015/PCN0020
+
+/* Workaround for unexpected health warm */
+void pmi8994_set_batt_health_good(void)
+{
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return;
+	}
+
+	the_chip->batt_warm = 0;
+	set_property_on_fg(the_chip, POWER_SUPPLY_PROP_HEALTH, POWER_SUPPLY_HEALTH_GOOD);
+}
+
+void pmi8994_rerun_apsd(void)
+{
+#ifdef CONFIG_HTC_BATT_WA_PCN0011
+	int rc;
+	int vbus_mv;
+
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return;
+	}
+
+	g_rerun_apsd_ignore_uv = true;
+
+	/* Clear uv/src_det */
+	if (workable_charging_cable()) {
+		pr_smb(PR_MISC, "Set ADAPTOR range to 5V to 9V\n");
+		smbchg_sec_masked_write(the_chip,
+				the_chip->usb_chgpth_base + USBIN_CHGR_CFG,
+				ADAPTER_ALLOWANCE_MASK, USBIN_ADAPTER_5V_9V_CONT);
+	}
+
+	/* fake a removal */
+	pr_smb(PR_MISC, "Faking Removal\n");
+	rc = fake_insertion_removal(the_chip, false);
+	if (rc < 0) {
+		pr_err("Couldn't fake removal HVDCP Removed rc=%d\n", rc);
+	}
+	/* disable APSD */
+	pr_smb(PR_MISC, "Disabling APSD\n");
+	rc = smbchg_sec_masked_write(the_chip,
+				the_chip->usb_chgpth_base + APSD_CFG,
+				AUTO_SRC_DETECT_EN_BIT, 0);
+	if (rc < 0) {
+		pr_err("Couldn't disable APSD rc=%d\n", rc);
+	}
+	msleep(100);
+	/* enable APSD */
+	rc = smbchg_sec_masked_write(the_chip,
+				the_chip->usb_chgpth_base + APSD_CFG,
+				AUTO_SRC_DETECT_EN_BIT, AUTO_SRC_DETECT_EN_BIT);
+	if (rc < 0)
+		pr_err("Couldn't enable APSD rc=%d\n", rc);
+	/* fake an insertion */
+	pr_smb(PR_MISC, "Faking Insertion\n");
+	rc = fake_insertion_removal(the_chip, true);
+	if (rc < 0) {
+		pr_err("Couldn't fake insertion rc=%d\n", rc);
+	}
+
+	g_rerun_apsd_ignore_uv = false;
+
+	vbus_mv = pmi8994_get_usbin_voltage_now()/1000;
+	if (vbus_mv < 4250){
+		pr_smb(PR_STATUS, "Cable out during rerun APSD!!\n");
+		update_usb_status(the_chip, false, true);
+		return;
+	}
+#endif //CONFIG_HTC_BATT_WA_PCN0011
+
+#ifdef CONFIG_HTC_BATT_WA_PCN0017
+	g_count_same_dischg = 0;
+#endif //CONFIG_HTC_BATT_WA_PCN0017
+}
+
+#ifdef CONFIG_HTC_BATT_WA_PCN0005
+void pmi8994_boot_update_usb_status(void)
+{
+	bool usb_present;
+	u8 reg;
+
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return;
+	}
+
+	smbchg_read(the_chip, &reg, the_chip->misc_base + IDEV_STS, 1);
+	usb_present = ((reg & 0x10) == 0)? false: true;
+	if (usb_present){
+		update_usb_status(the_chip, usb_present, true);
+		pr_smb(PR_STATUS, "Update usb type!");
+	}
+
+	return;
+}
+#endif //CONFIG_HTC_BATT_WA_PCN0005
+#ifdef CONFIG_HTC_BATT_WA_PCN0013
+static void smbchg_force_hvdcp_worker(struct work_struct *work)
+{
+	int rc;
+	int vbus_mv;
+
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return;
+	}
+
+	if (!((the_chip->usb_supply_type == POWER_SUPPLY_TYPE_USB_HVDCP) ||
+		(the_chip->usb_supply_type == POWER_SUPPLY_TYPE_USB_HVDCP_3))){
+		return;
+	}
+	pr_smb(PR_STATUS, "D+/D- weak cable detected, force change to  QC2.0\n");
+
+	/* Setting force 9v */
+	rc = force_9v_hvdcp(the_chip);
+	if (rc) {
+		pr_err("Force 9V failed.\n");
+		return;
+	}
+
+	vbus_mv = pmi8994_get_usbin_voltage_now()/1000;
+	if (vbus_mv < 4250){
+		pr_smb(PR_STATUS, "Cable out during force QC2.0!!\n");
+		return;
+	}
+
+	/* Change type to hvdcp */
+	rc = smbchg_change_usb_supply_type(the_chip, POWER_SUPPLY_TYPE_USB_HVDCP);
+	if (rc) {
+		pr_err("Change type to hvdcp failed.\n");
+		return;
+	}
+
+	power_supply_changed(&the_chip->batt_psy);
+
+	return;
+}
+
+static void smbchg_hvdcp_redet_worker(struct work_struct *work)
+{
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return;
+	}
+	restore_from_hvdcp_detection(the_chip);
+}
+#endif //CONFIG_HTC_BATT_WA_PCN0013
+void pmi8994_set_iusb_max (int current_ua)
+{
+	int rc;
+
+	if (!the_chip) {
+		pr_err("called before init\n");
+		return;
+	}
+
+	rc = vote(the_chip->usb_icl_votable, PSY_ICL_VOTER,
+			true, current_ua / 1000);
+	pr_smb(PR_STATUS, "set iusb max = %d\n",current_ua / 1000);
+	if (rc < 0) {
+		pr_err("Can't vote %d current limit rc=%d\n",
+			current_ua, rc);
+	}
+}
+
+int pmi8994_get_usbin_voltage_now(void)
+{
+	int rc = 0;
+	struct qpnp_vadc_result results;
+
+	if(!the_chip) {
+		pr_err("called before init\n");
+		return -EINVAL;
+	}
+
+	if (IS_ERR_OR_NULL(the_chip->vadc_dev)) {
+		the_chip->vadc_dev = qpnp_get_vadc(the_chip->dev, "usbin");
+		if (IS_ERR(the_chip->vadc_dev))
+			return PTR_ERR(the_chip->vadc_dev);
+	}
+
+	rc = qpnp_vadc_read(the_chip->vadc_dev, USBIN, &results);
+	if (rc) {
+		pr_err("Unable to read usbin rc=%d\n", rc);
+		return 0;
+	} else {
+		return results.physical;
+	}
+}
+int pmi8994_is_batt_full_eoc_stop(int *result)
+{
+	*result = g_is_batt_full_eoc_stop;
+	return 0;
+}
+
+int pmi8994_set_float_voltage_comp (int vfloat_comp)
+{
+	int rc;
+
+	if(!the_chip) {
+		pr_err("called before init\n");
+		return -EINVAL;
+	}
+
+	pr_smb(PR_STATUS, "set vfloat comp = %d\n",vfloat_comp);
+	rc = smbchg_float_voltage_comp_set(the_chip, vfloat_comp);
+        the_chip->float_voltage_comp = vfloat_comp;
+
+	if (rc) {
+		pr_err("Unable to set float_voltage_comp rc=%d\n", rc);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+bool is_otg_enabled(void)
+{
+	u8 otg_status = 0;
+	smbchg_read(the_chip, &otg_status, the_chip->bat_if_base + CMD_CHG_REG, 1);
+	if ((otg_status & OTG_EN_BIT) != 0)
+		return true;
+	else
+		return false;
+}
+
+bool usb_otg_pulse_skip_control(bool disable)
+{
+        if(!the_chip) {
+                pr_err("called before init\n");
+                return false;
+        }
+	smbchg_otg_pulse_skip_disable(the_chip, REASON_OTG_ENABLED, disable);
+	return true;
+}
+
+#define CHG_SFT_RT_STS		BIT(3)
+#define PMIC_REVID_REVISION3	0x102
+#define PMIC_REVID_REVISION4	0x103
+int charger_dump_all(void)
+{
+	u8 chgr_sts = 0, chgr_rt_sts = 0, bat_if_rt_sts = 0;
+	u8 chgpth_rt_sts = 0, iusb_reg = 0, aicl_reg = 0, misc_idev_sts = 0, aicl_rerun_reg = 0;
+	u8 misc_rt_sts = 0, chgr_cfg2 = 0, bat_if_cmd = 0, chgpth_cmd = 0, chgpth_cfg = 0;
+	u8 chgpth_input_sts = 0, chgpth_aicl_cfg = 0;
+	u8 pmic_revid_rev3 = 0, pmic_revid_rev4 = 0;
+	int cc_uah = 0, rc = 0;
+	int warm_temp = 0, cool_temp = 0;
+
+	if(!the_chip) {
+		pr_err("called before init\n");
+		return -EINVAL;
+	}
+
+	smbchg_read(the_chip, &chgr_sts, the_chip->chgr_base + CHGR_STS, 1);
+	smbchg_read(the_chip, &chgr_rt_sts, the_chip->chgr_base + RT_STS, 1);
+	smbchg_read(the_chip, &chgr_cfg2, the_chip->chgr_base + CHGR_CFG2, 1);
+	smbchg_read(the_chip, &bat_if_rt_sts, the_chip->bat_if_base + RT_STS, 1);
+	smbchg_read(the_chip, &bat_if_cmd, the_chip->bat_if_base + CMD_CHG_REG, 1);
+	smbchg_read(the_chip, &chgpth_input_sts, the_chip->usb_chgpth_base + INPUT_STS, 1);
+	smbchg_read(the_chip, &chgpth_rt_sts, the_chip->usb_chgpth_base + RT_STS, 1);
+	smbchg_read(the_chip, &chgpth_cmd, the_chip->usb_chgpth_base + CMD_IL, 1);
+	smbchg_read(the_chip, &chgpth_aicl_cfg, the_chip->usb_chgpth_base + USB_AICL_CFG, 1);
+	smbchg_read(the_chip, &chgpth_cfg, the_chip->usb_chgpth_base + CHGPTH_CFG, 1);
+	smbchg_read(the_chip, &misc_rt_sts, the_chip->misc_base + RT_STS, 1);
+	smbchg_read(the_chip, &misc_idev_sts, the_chip->misc_base + IDEV_STS, 1);
+	smbchg_read(the_chip, &iusb_reg, the_chip->usb_chgpth_base + IL_CFG, 1);
+	smbchg_read(the_chip, &aicl_reg, the_chip->usb_chgpth_base + ICL_STS_1_REG, 1);
+	smbchg_read(the_chip, &aicl_rerun_reg, the_chip->misc_base + MISC_TRIM_OPT_15_8, 1);
+	smbchg_read(the_chip, &pmic_revid_rev3, PMIC_REVID_REVISION3, 1);
+	smbchg_read(the_chip, &pmic_revid_rev4, PMIC_REVID_REVISION4, 1);
+	rc = get_property_from_fg(the_chip, POWER_SUPPLY_PROP_CHARGE_NOW_RAW, &cc_uah);
+	if (rc) {
+		/* bms psy does not support POWER_SUPPLY_PROP_CHARGE_NOW */
+		cc_uah = 0;
+	}
+	rc = get_property_from_fg(the_chip, POWER_SUPPLY_PROP_WARM_TEMP, &warm_temp);
+	rc = get_property_from_fg(the_chip, POWER_SUPPLY_PROP_COOL_TEMP, &cool_temp);
+
+	if (chgr_rt_sts & CHG_SFT_RT_STS)
+		pr_smb(PR_STATUS, "Charging Fail. Safety timeout.\n");
+
+	if (chgpth_rt_sts & USBIN_OV_BIT)
+		pr_smb(PR_STATUS, "Charging Fail. Over voltage.\n");
+
+	pr_smb(PR_STATUS,"[BATT][SMBCHG] 0x100E=%02x,0x1010=%02x,0x10FC=%02x,"
+		"0x1210=%02x,0x1242=%02x,0x130D=%02x,0x1310=%02x,0x1340=%02x,0x13F3=%02x,"
+		"0x13F4=%02x,0x1610=%02x,0x13F2=%02x,0x1307=%02x,0x1608=%02x,0x16F5=%02x,cc=%duAh,"
+		"warm_temp=%d,cool_temp=%d,C_workable=%d,pmic=rev%d.%d\n",
+		chgr_sts,chgr_rt_sts,chgr_cfg2,bat_if_rt_sts,bat_if_cmd,chgpth_input_sts,
+		chgpth_rt_sts,chgpth_cmd,chgpth_aicl_cfg,chgpth_cfg,misc_rt_sts,iusb_reg,aicl_reg,
+		misc_idev_sts,aicl_rerun_reg,cc_uah,warm_temp,cool_temp,g_typec_workable,
+		pmic_revid_rev4,pmic_revid_rev3);
+
+	if (smbchg_debug_mask & PR_DUMP)
+		dump_regs(the_chip);
+
+	return 0;
+}
+
+int pmi8996_get_chgr_sts(void)
+{
+	u8 chgr_sts = 0;
+	smbchg_read(the_chip, &chgr_sts, the_chip->chgr_base + CHGR_STS, 1);
+	return chgr_sts;
+}
+#endif
+
+#ifdef CONFIG_HTC_BATT_PCN0022
+static int pm8996_adc_map_temp_voltage(int input, int *output)
+{
+        int i = 0;
+        const struct qpnp_vadc_map_pt *pts;
+        int tablesize;
+
+        pts  = usb_adcmap_btm_threshold;
+        if (pts == NULL)
+                return -EINVAL;
+
+        tablesize = ARRAY_SIZE(usb_adcmap_btm_threshold);
+
+        while (i < tablesize) {
+                if ((pts[i].y < input)) {
+                        /* table entry is less than measured
+                                value and table is descending, stop */
+                        break;
+                } else {
+                        i++;
+                }
+        }
+
+        if (i == 0) {
+                *output = pts[0].x;
+        } else if (i == tablesize) {
+                *output = pts[tablesize-1].x;
+        } else {
+                /* result is between search_index and search_index-1 */
+                /* interpolate linearly */
+                *output = (( ((pts[i].x - pts[i-1].x)*
+                        (input - pts[i-1].y))/
+                        (pts[i].y - pts[i-1].y))+
+                        pts[i-1].x);
+        }
+
+        return 0;
+}
+
+int pm8996_get_usb_temp(void)
+{
+	int usb_pwr_temp_uv, usb_pwr_temp;
+
+	usb_pwr_temp_uv = pmi8994_get_htc_chg_usb_pwr_temp_adc();
+	pm8996_adc_map_temp_voltage(usb_pwr_temp_uv/1000,&usb_pwr_temp);
+
+	return usb_pwr_temp;
+}
+
+#endif //CONFIG_HTC_BATT_PCN0022
+
+#ifdef CONFIG_HTC_BATT_PCN0009
+int pmi8994_charger_get_attr_text(char *buf, int size)
+{
+	int len = 0;
+	u16 addr;
+	u8 reg;
+	int vbat_mv, ibat_ma, soc, batt_temp, vbus_uv;
+	int health, present, charger_type, usb_online, dc_online;
+	u8 chgr_sts = 0, chgr_rt_sts = 0, bat_if_rt_sts = 0;
+	u8 chgpth_rt_sts = 0, iusb_reg = 0, aicl_reg = 0;
+	int batt_soc, system_soc, aicl_result, cc_uah, rc;
+	int warm_temp = 0, cool_temp = 0;
+	u8 pmic_revid_rev3 = 0, pmic_revid_rev4 = 0;
+#ifdef CONFIG_HTC_BATT_PCN0016
+	int htc_chg_mode, htc_chg_en, usbin_isen_ma, usbin_isen_uv, vbusdet_uv, usb_pwr_temp_uv;
+#endif //CONFIG_HTC_BATT_PCN0016
+#ifdef CONFIG_HTC_BATT_PCN0022
+	int usb_pwr_temp;
+#endif //CONFIG_HTC_BATT_PCN0022
+
+	if(!the_chip) {
+		pr_err("called before init\n");
+		return -EINVAL;
+	}
+
+	vbat_mv = get_prop_batt_voltage_now(the_chip)/1000;
+	ibat_ma = get_prop_batt_current_now(the_chip)/1000;
+	soc = get_prop_batt_capacity(the_chip);
+	vbus_uv = pmi8994_get_usbin_voltage_now();
+	batt_temp = get_prop_batt_temp(the_chip);
+	health = get_prop_batt_health(the_chip);
+	present = get_prop_batt_present(the_chip);
+	charger_type = get_prop_charge_type(the_chip);
+	usb_online = is_usb_present(the_chip);
+	dc_online = is_dc_present(the_chip);
+	batt_soc = get_prop_batt_soc(the_chip);
+	system_soc = get_prop_system_soc(the_chip);
+	aicl_result = smbchg_get_aicl_level_ma(the_chip);
+
+	smbchg_read(the_chip, &chgr_sts, the_chip->chgr_base + CHGR_STS, 1);
+	smbchg_read(the_chip, &chgr_rt_sts, the_chip->chgr_base + RT_STS, 1);
+	smbchg_read(the_chip, &bat_if_rt_sts, the_chip->bat_if_base + RT_STS, 1);
+	smbchg_read(the_chip, &chgpth_rt_sts,the_chip->usb_chgpth_base + RT_STS, 1);
+
+	smbchg_read(the_chip, &iusb_reg, the_chip->usb_chgpth_base + IL_CFG, 1);
+	smbchg_read(the_chip, &aicl_reg, the_chip->usb_chgpth_base + ICL_STS_1_REG, 1);
+	rc = get_property_from_fg(the_chip, POWER_SUPPLY_PROP_CHARGE_NOW_RAW, &cc_uah);
+	if (rc)
+		cc_uah = 0;
+	rc = get_property_from_fg(the_chip, POWER_SUPPLY_PROP_WARM_TEMP, &warm_temp);
+	rc = get_property_from_fg(the_chip, POWER_SUPPLY_PROP_COOL_TEMP, &cool_temp);
+	smbchg_read(the_chip, &pmic_revid_rev3, PMIC_REVID_REVISION3, 1);
+	smbchg_read(the_chip, &pmic_revid_rev4, PMIC_REVID_REVISION4, 1);
+
+	len += scnprintf(buf + len, size -len,
+			"SOC(%%): %d;\n"
+			"VBAT(mV): %d;\n"
+			"IBAT(mA): %d;\n"
+			"VBUS(uV): %d;\n"
+			"BATT_TEMP: %d;\n"
+			"HEALTH: %d;\n"
+			"BATT_PRESENT(bool): %d;\n"
+			"CHARGE_TYPE: %d;\n"
+			"USB_ONLINE: %d;\n"
+			"DC_ONLINE: %d;\n"
+			"CHGR_STS: 0x%02x;\n"
+			"CHGR_RT_STS: 0x%02x;\n"
+			"IF_RT_STS: 0x%02x;\n"
+			"USB_RT_STS: 0x%02x;\n"
+			"USB_IL_CFG: 0x%02x;\n"
+			"USB_ICL_STS_1_REG: 0x%02x;\n"
+			"BATT_SOC: %d\n"
+			"SYSTEM_SOC: %d\n"
+			"CC_uAh: %d\n"
+			"AICL_RESLULT: %d\n"
+			"warm_temp: %d\n"
+			"cool_temp: %d\n"
+			"PMIC: rev%d.%d\n",
+			soc, vbat_mv, ibat_ma, vbus_uv, batt_temp, health, present,
+			charger_type, usb_online, dc_online,
+			chgr_sts, chgr_rt_sts, bat_if_rt_sts, chgpth_rt_sts,
+			iusb_reg, aicl_reg, batt_soc, system_soc, cc_uah, aicl_result,
+			warm_temp, cool_temp, pmic_revid_rev4, pmic_revid_rev3);
+
+#ifdef CONFIG_HTC_BATT_PCN0016
+	htc_chg_mode = pmi8994_get_htc_chg_ext_mode();
+	htc_chg_en = pmi8994_get_htc_chg_en();
+	usbin_isen_ma = pmi8994_get_htc_chg_usb_in_isen_ma();
+	usbin_isen_uv = pmi8994_get_htc_chg_usb_in_isen_adc();
+	vbusdet_uv = 	pmi8994_get_htc_chg_vbusdet_adc();
+	usb_pwr_temp_uv = pmi8994_get_htc_chg_usb_pwr_temp_adc();
+
+
+	len += scnprintf(buf + len, size -len,
+			"HTC_CHG_MODE: %d;\n"
+			"HTC_CHG_EN: %d;\n"
+			"USB_IN_ISEN(mA): %d;\n"
+			"USB_IN_ISEN(uV): %d;\n"
+			"VBUSDET(uV): %d;\n"
+			"USB_PWR_TEMP(uV): %d;\n",
+			htc_chg_mode, htc_chg_en, usbin_isen_ma, usbin_isen_uv, vbusdet_uv, usb_pwr_temp_uv);
+#endif //CONFIG_HTC_BATT_PCN0016
+#ifdef CONFIG_HTC_BATT_PCN0022
+	pm8996_adc_map_temp_voltage(usb_pwr_temp_uv/1000,&usb_pwr_temp);
+	len += scnprintf(buf + len, size -len,
+			"USB_PWR_TEMP(degree): %d;\n",
+			usb_pwr_temp);
+#endif //CONFIG_HTC_BATT_PCN0022
+
+	/* charger peripheral */
+	len += scnprintf(buf + len, size -len, "CHGR_STS ------\n");
+	for (addr = 0xB; addr <= 0x10; addr++){
+		smbchg_read(the_chip, &reg, the_chip->chgr_base + addr, 1); //"CHGR Status"
+		len += scnprintf(buf + len, size -len, "0x%04x: 0x%02x\n", the_chip->chgr_base + addr, reg);
+	}
+	len += scnprintf(buf + len, size -len, "CHGR_CF ------\n");
+	for (addr = 0xF0; addr <= 0xFF; addr++){
+		smbchg_read(the_chip, &reg, the_chip->chgr_base + addr, 1); //"CHGR Config"
+		len += scnprintf(buf + len, size -len, "0x%04x: 0x%02x\n", the_chip->chgr_base + addr, reg);
+	}
+	/* battery interface peripheral */
+	smbchg_read(the_chip, &reg, the_chip->bat_if_base + RT_STS, 1);
+	len += scnprintf(buf + len, size -len, "BAT_IF_STS(0x%04x): 0x%02x\n", the_chip->bat_if_base + RT_STS, reg);
+	smbchg_read(the_chip, &reg, the_chip->bat_if_base + CMD_CHG_REG, 1);
+	len += scnprintf(buf + len, size -len, "BAT_IF_Command(0x%04x): 0x%02x\n", the_chip->bat_if_base + CMD_CHG_REG, reg);
+
+	len += scnprintf(buf + len, size -len, "BAT_IF_CF ------\n");
+	for (addr = 0xF0; addr <= 0xFB; addr++){
+		smbchg_read(the_chip, &reg, the_chip->bat_if_base + addr, 1); //"BAT_IF Config"
+		len += scnprintf(buf + len, size -len, "0x%04x: 0x%02x\n", the_chip->bat_if_base + addr, reg);
+	}
+	/* usb charge path peripheral */
+	len += scnprintf(buf + len, size -len, "USB_STS ------\n");
+	for (addr = 0x7; addr <= 0x10; addr++){
+		smbchg_read(the_chip, &reg, the_chip->usb_chgpth_base + addr, 1); //"USB Status"
+		len += scnprintf(buf + len, size -len, "0x%04x: 0x%02x\n", the_chip->usb_chgpth_base + addr, reg);
+	}
+	smbchg_read(the_chip, &reg, the_chip->usb_chgpth_base + CMD_IL, 1);
+	len += scnprintf(buf + len, size -len, "USB_Command(0x%04x): 0x%02x\n", the_chip->usb_chgpth_base + CMD_IL, reg);
+	len += scnprintf(buf + len, size -len, "USB_CF ------\n");
+	for (addr = 0xF0; addr <= 0xF5; addr++){
+		smbchg_read(the_chip, &reg, the_chip->usb_chgpth_base + addr, 1); //"USB Config"
+		len += scnprintf(buf + len, size -len, "0x%04x: 0x%02x\n", the_chip->usb_chgpth_base + addr, reg);
+	}
+	/* dc charge path peripheral */
+	smbchg_read(the_chip, &reg, the_chip->dc_chgpth_base + RT_STS, 1);
+	len += scnprintf(buf + len, size -len, "DC_Status(0x%04x): 0x%02x\n", the_chip->dc_chgpth_base + RT_STS, reg);
+	len += scnprintf(buf + len, size -len, "DC_CF ------\n");
+	for (addr = 0xF0; addr <= 0xF6; addr++){
+		smbchg_read(the_chip, &reg, the_chip->dc_chgpth_base + addr, 1); //"DC Config"
+		len += scnprintf(buf + len, size -len, "0x%04x: 0x%02x\n", the_chip->dc_chgpth_base + addr, reg);
+	}
+	/* misc peripheral */
+	smbchg_read(the_chip, &reg, the_chip->misc_base + IDEV_STS, 1);
+	len += scnprintf(buf + len, size -len, "MISC_STS(0x%04x): 0x%02x\n", the_chip->misc_base + IDEV_STS, reg);
+	smbchg_read(the_chip, &reg, the_chip->misc_base + RT_STS, 1);
+	len += scnprintf(buf + len, size -len, "MISC_RT_STS(0x%04x): 0x%02x\n", the_chip->misc_base + RT_STS, reg);
+	len += scnprintf(buf + len, size -len, "MISC_CF ------\n");
+	for (addr = 0xF0; addr <= 0xFF; addr++){
+		smbchg_read(the_chip, &reg, the_chip->misc_base + addr, 1); //"MISC Config"
+		len += scnprintf(buf + len, size -len, "0x%04x: 0x%02x\n", the_chip->misc_base + addr, reg);
+	}
+	return len;
+}
+
+#endif //CONFIG_HTC_BATT_PCN0009
+
 static void rerun_hvdcp_det_if_necessary(struct smbchg_chip *chip)
 {
 	enum power_supply_type usb_supply_type;
 	char *usb_type_name;
 	int rc;
 
-#ifdef CONFIG_LGE_PM_FACTORY_CABLE
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	if (is_factory_cable(chip))
-		return;
-#endif
-#endif
-
 	if (!(chip->wa_flags & SMBCHG_RESTART_WA))
 		return;
-
-#ifdef CONFIG_LGE_PM
-	/*
-	 * there is possible that DCP read as SDP.
-	 * detecting floated-charger can recovery this problem,
-	 * but not in chargerlogo mode.
-	 * so we rerun apsd here when chargerlogo boot
-	 */
-	read_usb_type(chip, &usb_type_name, &usb_supply_type);
-	if (lge_get_boot_mode() == LGE_BOOT_MODE_CHARGERLOGO &&
-			usb_supply_type == POWER_SUPPLY_TYPE_USB) {
-		pr_smb(PR_STATUS, "Faking Removal\n");
-		rc = fake_insertion_removal(chip, false);
-		msleep(50);
-		pr_smb(PR_STATUS, "Faking Insertion\n");
-		rc = fake_insertion_removal(chip, true);
-	}
-#endif
-
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-	/* We don't need to to this here because HVDCP is disabled in this time.
-	   We will do this job later in smbchg_hvdcp_det_prepare() */
-	return;
-#endif
 
 	read_usb_type(chip, &usb_type_name, &usb_supply_type);
 	if (usb_supply_type == POWER_SUPPLY_TYPE_USB_DCP
 		&& !is_hvdcp_present(chip)) {
 		pr_smb(PR_STATUS, "DCP found rerunning APSD\n");
-#ifdef CONFIG_LGE_PM
-		/* AICL decrease current during voting icl as 300mA cause AICL suspend.
-		   so increase voting current to 500mA to prevent AICL suspend */
-		rc = vote(chip->usb_icl_votable,
-				CHG_SUSPEND_WORKAROUND_ICL_VOTER, true, 500);
-		if (rc < 0)
-			pr_err("Couldn't vote for 500mA for suspend wa, going ahead rc=%d\n",
-					rc);
-#else
 		rc = vote(chip->usb_icl_votable,
 				CHG_SUSPEND_WORKAROUND_ICL_VOTER, true, 300);
 		if (rc < 0)
 			pr_err("Couldn't vote for 300mA for suspend wa, going ahead rc=%d\n",
 					rc);
-#endif
 
 		rc = rerun_apsd(chip);
 		if (rc)
 			pr_err("APSD rerun failed rc=%d\n", rc);
 
-#ifdef CONFIG_LGE_PM
-		/* read usb type too fast after fake removal/insertion can cause miss-reading
-		   usb type. so add some delay between fake insertion and reading type */
-		msleep(100);
-#endif
 		read_usb_type(chip, &usb_type_name, &usb_supply_type);
 		if (usb_supply_type != POWER_SUPPLY_TYPE_USB_DCP) {
 			msleep(500);
@@ -10978,20 +10593,6 @@ static void rerun_hvdcp_det_if_necessary(struct smbchg_chip *chip)
 	}
 }
 
-static void smbchg_release_function(struct smbchg_chip *chip) {
-	spin_lock_init(&chip->sec_access_lock);
-	mutex_destroy(&chip->therm_lvl_lock);
-	mutex_destroy(&chip->usb_set_online_lock);
-	mutex_destroy(&chip->parallel.lock);
-	mutex_destroy(&chip->taper_irq_lock);
-	mutex_destroy(&chip->pm_lock);
-	mutex_destroy(&chip->wipower_config);
-	mutex_destroy(&chip->usb_status_lock);
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-	mutex_destroy(&chip->lge_cc_ibat_lock);
-#endif
-}
-
 static int smbchg_probe(struct spmi_device *spmi)
 {
 	int rc;
@@ -10999,16 +10600,6 @@ static int smbchg_probe(struct spmi_device *spmi)
 	struct power_supply *usb_psy, *typec_psy = NULL;
 	struct qpnp_vadc_chip *vadc_dev = NULL, *vchg_vadc_dev = NULL;
 	const char *typec_psy_name;
-
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-	union lge_power_propval lge_val = {0,};
-	unsigned int cable_smem_size = 0;
-	unsigned int *p_cable_type = NULL;
-	int factory_cable = 0;
-	struct lge_power *lge_cd_lpc = NULL;
-	int boot_cable_type = 0;
-	int boot_cable_boot = 0;
-#endif
 
 	usb_psy = power_supply_get_by_name("usb");
 	if (!usb_psy) {
@@ -11034,8 +10625,8 @@ static int smbchg_probe(struct spmi_device *spmi)
 		}
 	}
 
-	if (of_find_property(spmi->dev.of_node, "qcom,dcin-vadc", NULL)) {
-		vadc_dev = qpnp_get_vadc(&spmi->dev, "dcin");
+	if (of_find_property(spmi->dev.of_node, "qcom,usbin-vadc", NULL)) {
+		vadc_dev = qpnp_get_vadc(&spmi->dev, "usbin");
 		if (IS_ERR(vadc_dev)) {
 			rc = PTR_ERR(vadc_dev);
 			if (rc != -EPROBE_DEFER)
@@ -11062,138 +10653,51 @@ static int smbchg_probe(struct spmi_device *spmi)
 		return -ENOMEM;
 	}
 
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CABLE_DETECT
-/* TODO : cable detect code will be removed in charger source.*/
-	lge_cd_lpc = lge_power_get_by_name("lge_cable_detect");
-	if (!lge_cd_lpc) {
-		p_cable_type = (smem_get_entry(SMEM_ID_VENDOR1,
-					&cable_smem_size, 0, 0));
-
-		if (p_cable_type && cable_smem_size != 0) {
-			boot_cable_type = *p_cable_type;
-			if ((boot_cable_type == CABLE_ADC_56K) ||
-					(boot_cable_type == CABLE_ADC_130K) ||
-					(boot_cable_type == CABLE_ADC_910K))
-				factory_cable = 1;
-
-			pr_err("boot_pif : %d, factory_type : %d\n",
-					boot_cable_type, factory_cable);
-		} else {
-			pr_err("Not get smem cable vender\n");
-			return -EPROBE_DEFER;
-		}
-	} else {
-		chip->lge_cd_lpc = lge_cd_lpc;
-		pr_err("Success get LG power class property\n");
-
-		rc = lge_cd_lpc->get_property(lge_cd_lpc,
-				LGE_POWER_PROP_IS_FACTORY_CABLE, &lge_val);
-		boot_cable_type = lge_val.intval;
-
-		rc = lge_cd_lpc->get_property(lge_cd_lpc,
-				LGE_POWER_PROP_CABLE_TYPE_BOOT, &lge_val);
-		boot_cable_boot = lge_val.intval;
-	}
-
-	if ((boot_cable_type == CABLE_ADC_56K) ||
-		(boot_cable_type == CABLE_ADC_130K) ||
-		(boot_cable_type == CABLE_ADC_910K) ||
-		(boot_cable_boot == LT_CABLE_56K) ||
-		(boot_cable_boot == LT_CABLE_130K) ||
-		(boot_cable_boot == LT_CABLE_910K)) {
-		factory_mode =1;
-		if (boot_cable_type != CABLE_ADC_130K &&
-				boot_cable_boot != LT_CABLE_130K)
-			is_56k_910k = 1;
-		pr_err("is_56k_910k : %d, factory_mode : %d\n",
-				is_56k_910k, factory_mode);
-	} else {
-		factory_mode = 0;
-		is_56k_910k = 0;
-	}
-
-	if (factory_cable == 1 || factory_mode == 1) {
-		chip->is_factory_cable = true;
-		is_boot_factory_cable = true;
-	} else {
-		chip->is_factory_cable = false;
-		is_boot_factory_cable = false;
-	}
-#endif
-
 	chip->fcc_votable = create_votable(&spmi->dev,
 			"SMBCHG: fcc",
-#ifdef CONFIG_LGE_PM
-			VOTE_MIN, NUM_FCC_VOTER, chip->cfg_fastchg_current_ma, 2000,
-#else
 			VOTE_MIN, NUM_FCC_VOTER, 2000,
-#endif
 			set_fastchg_current_vote_cb);
 	if (IS_ERR(chip->fcc_votable))
 		return PTR_ERR(chip->fcc_votable);
 
 	chip->usb_icl_votable = create_votable(&spmi->dev,
 			"SMBCHG: usb_icl",
-#ifdef CONFIG_LGE_PM
-			VOTE_MIN, NUM_ICL_VOTER, 3000, 3000,
-#else
 			VOTE_MIN, NUM_ICL_VOTER, 3000,
-#endif
 			set_usb_current_limit_vote_cb);
 	if (IS_ERR(chip->usb_icl_votable))
 		return PTR_ERR(chip->usb_icl_votable);
 
 	chip->dc_icl_votable = create_votable(&spmi->dev,
 			"SMBCHG: dcl_icl",
-#ifdef CONFIG_LGE_PM
-			VOTE_MIN, NUM_ICL_VOTER, 3000, 3000,
-#else
 			VOTE_MIN, NUM_ICL_VOTER, 3000,
-#endif
 			set_dc_current_limit_vote_cb);
 	if (IS_ERR(chip->dc_icl_votable))
 		return PTR_ERR(chip->dc_icl_votable);
 
 	chip->usb_suspend_votable = create_votable(&spmi->dev,
 			"SMBCHG: usb_suspend",
-#ifdef CONFIG_LGE_PM
-			VOTE_SET_ANY, NUM_EN_VOTERS, 0, 0,
-#else
 			VOTE_SET_ANY, NUM_EN_VOTERS, 0,
-#endif
 			usb_suspend_vote_cb);
 	if (IS_ERR(chip->usb_suspend_votable))
 		return PTR_ERR(chip->usb_suspend_votable);
 
 	chip->dc_suspend_votable = create_votable(&spmi->dev,
 			"SMBCHG: dc_suspend",
-#ifdef CONFIG_LGE_PM
-			VOTE_SET_ANY, NUM_EN_VOTERS, 0, 0,
-#else
 			VOTE_SET_ANY, NUM_EN_VOTERS, 0,
-#endif
 			dc_suspend_vote_cb);
 	if (IS_ERR(chip->dc_suspend_votable))
 		return PTR_ERR(chip->dc_suspend_votable);
 
 	chip->battchg_suspend_votable = create_votable(&spmi->dev,
 			"SMBCHG: battchg_suspend",
-#ifdef CONFIG_LGE_PM
-			VOTE_SET_ANY, NUM_BATTCHG_EN_VOTERS, 0, 0,
-#else
 			VOTE_SET_ANY, NUM_BATTCHG_EN_VOTERS, 0,
-#endif
 			charging_suspend_vote_cb);
 	if (IS_ERR(chip->battchg_suspend_votable))
 		return PTR_ERR(chip->battchg_suspend_votable);
 
 	chip->hw_aicl_rerun_disable_votable = create_votable(&spmi->dev,
 			"SMBCHG: hwaicl_disable",
-#ifdef CONFIG_LGE_PM
-			VOTE_SET_ANY, NUM_HW_AICL_DISABLE_VOTERS, 0, 0,
-#else
 			VOTE_SET_ANY, NUM_HW_AICL_DISABLE_VOTERS, 0,
-#endif
 			smbchg_hw_aicl_rerun_disable_cb);
 	if (IS_ERR(chip->hw_aicl_rerun_disable_votable))
 		return PTR_ERR(chip->hw_aicl_rerun_disable_votable);
@@ -11201,65 +10705,56 @@ static int smbchg_probe(struct spmi_device *spmi)
 	chip->hw_aicl_rerun_enable_indirect_votable = create_votable(&spmi->dev,
 			"SMBCHG: hwaicl_enable_indirect",
 			VOTE_SET_ANY, NUM_HW_AICL_RERUN_ENABLE_INDIRECT_VOTERS,
-#ifdef CONFIG_LGE_PM
-			0, 0, smbchg_hw_aicl_rerun_enable_indirect_cb);
-#else
 			0, smbchg_hw_aicl_rerun_enable_indirect_cb);
-#endif
 	if (IS_ERR(chip->hw_aicl_rerun_enable_indirect_votable))
 		return PTR_ERR(chip->hw_aicl_rerun_enable_indirect_votable);
 
 	chip->aicl_deglitch_short_votable = create_votable(&spmi->dev,
 			"SMBCHG: hwaicl_short_deglitch",
-#ifdef CONFIG_LGE_PM
-			VOTE_SET_ANY, NUM_HW_SHORT_DEGLITCH_VOTERS, 0, 0,
-#else
 			VOTE_SET_ANY, NUM_HW_SHORT_DEGLITCH_VOTERS, 0,
-#endif
 			smbchg_aicl_deglitch_config_cb);
 	if (IS_ERR(chip->aicl_deglitch_short_votable))
 		return PTR_ERR(chip->aicl_deglitch_short_votable);
+
+	chip->hvdcp_enable_votable = create_votable(&spmi->dev,
+			"SMBCHG: hvdcp_enable",
+			VOTE_MIN, NUM_HVDCP_VOTERS, 1,
+			smbchg_hvdcp_enable_cb);
+	if (IS_ERR(chip->hvdcp_enable_votable))
+		return PTR_ERR(chip->hvdcp_enable_votable);
 
 	INIT_WORK(&chip->usb_set_online_work, smbchg_usb_update_online_work);
 	INIT_DELAYED_WORK(&chip->parallel_en_work,
 			smbchg_parallel_usb_en_work);
 	INIT_DELAYED_WORK(&chip->vfloat_adjust_work, smbchg_vfloat_adjust_work);
 	INIT_DELAYED_WORK(&chip->hvdcp_det_work, smbchg_hvdcp_det_work);
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-	INIT_DELAYED_WORK(&chip->hvdcp_det_prepare_work,
-		smbchg_hvdcp_det_prepare_work);
+#ifdef CONFIG_HTC_BATT
+	INIT_WORK(&chip->clean_tcc_WA, smbchg_clean_tcc_WA_work);
 #endif
-#ifdef CONFIG_LGE_PM
-	INIT_DELAYED_WORK(&chip->hvdcp_recovery_work, smbchg_hvdcp_recovery_work);
-#endif
-#ifdef CONFIG_LGE_PM_VFLOAT_TRIM_RESTORE
-	INIT_DELAYED_WORK(&chip->vfloat_trim_check_work,
-		smbchg_vfloat_trim_check_work);
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-	INIT_DELAYED_WORK(&chip->lge_cc_enable_work, lge_cc_work_enable_check);
-#endif
+#ifdef CONFIG_HTC_BATT_PCN0010
+	INIT_WORK(&chip->usb_aicl_limit_current, smbchg_usb_limit_current_WA_work);
+#endif //CONFIG_HTC_BATT_PCN0010
+#ifdef CONFIG_HTC_BATT_WA_PCN0008
+	INIT_DELAYED_WORK(&chip->usb_limit_max_current, smbchg_usb_limit_max_current_work);
+#endif //CONFIG_HTC_BATT_WA_PCN0008
+#ifdef CONFIG_HTC_BATT_WA_PCN0011
+	INIT_DELAYED_WORK(&chip->rerun_apsd_work, smbchg_rerun_apsd_worker);
+#endif //CONFIG_HTC_BATT_WA_PCN0011
+#ifdef CONFIG_HTC_BATT_PCN0015
+	INIT_DELAYED_WORK(&chip->iusb_5v_2a_detect_work, smbchg_iusb_5v_2a_detect_work);
+	INIT_DELAYED_WORK(&chip->downgrade_iusb_work, smbchg_downgrade_iusb_work);
+#ifdef CONFIG_HTC_BATT_WA_PCN0017
+	INIT_DELAYED_WORK(&chip->chk_cable_workable_work, smbchg_chk_cable_workable_work);
+#endif //CONFIG_HTC_BATT_WA_PCN0017
+#endif //CONFIG_HTC_BATT_PCN0015
+#ifdef CONFIG_HTC_BATT_WA_PCN0013
+	INIT_DELAYED_WORK(&chip->force_hvdcp_work, smbchg_force_hvdcp_worker);
+	INIT_WORK(&chip->hvdcp_redet_work, smbchg_hvdcp_redet_worker);
+#endif //CONFIG_HTC_BATT_WA_PCN0013
 	init_completion(&chip->src_det_lowered);
 	init_completion(&chip->src_det_raised);
 	init_completion(&chip->usbin_uv_lowered);
 	init_completion(&chip->usbin_uv_raised);
-#ifdef CONFIG_LGE_PM_DEBUG
-	INIT_DELAYED_WORK(&chip->charging_info_work, lgcc_charger_reginfo);
-	schedule_delayed_work(&chip->charging_info_work,
-		round_jiffies_relative(msecs_to_jiffies(CHARGING_INFORM_NORMAL_TIME)));
-#endif
-#ifdef CONFIG_LGE_PM_PARALLEL_CHARGING
-	INIT_DELAYED_WORK(&chip->parallel_usb_taper_work,
-			smbchg_parallel_usb_taper_work);
-	INIT_DELAYED_WORK(&chip->battchg_protect_work,
-			smbchg_battchg_protect_work);
-#endif
-#ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
-	INIT_DELAYED_WORK(&chip->enable_evp_chg_work, enable_evp_chg_work);
-#endif
-#ifdef CONFIG_LGE_PM_WEAK_BATT_PACK
-	INIT_DELAYED_WORK(&chip->batt_pack_check_work, weak_batt_pack_check_work);
-#endif
 	chip->vadc_dev = vadc_dev;
 	chip->vchg_vadc_dev = vchg_vadc_dev;
 	chip->spmi = spmi;
@@ -11268,14 +10763,6 @@ static int smbchg_probe(struct spmi_device *spmi)
 	chip->typec_psy = typec_psy;
 	chip->fake_battery_soc = -EINVAL;
 	chip->usb_online = -EINVAL;
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-	chip->ctype_rp = RP_NONE;
-	chip->hvdcp_det_retry = 0;
-#endif
-#ifdef CONFIG_LGE_PM
-	chip->hvdcp_uv_count = 0;
-	chip->hvdcp_uv_recovery = false;
-#endif
 	dev_set_drvdata(&spmi->dev, chip);
 
 	spin_lock_init(&chip->sec_access_lock);
@@ -11286,14 +10773,6 @@ static int smbchg_probe(struct spmi_device *spmi)
 	mutex_init(&chip->pm_lock);
 	mutex_init(&chip->wipower_config);
 	mutex_init(&chip->usb_status_lock);
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-	mutex_init(&chip->lge_cc_ibat_lock);
-#endif
-
-#ifdef CONFIG_LGE_PM
-	smb_chip = chip;
-#endif
-
 	device_init_wakeup(chip->dev, true);
 
 	rc = smbchg_parse_peripherals(chip);
@@ -11335,59 +10814,15 @@ static int smbchg_probe(struct spmi_device *spmi)
 		goto out;
 	}
 
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_VZW_REQ
-	chip->lge_vzw_lpc = lge_power_get_by_name("lge_vzw");
-	if (!chip->lge_vzw_lpc) {
-		pr_err("Failed to get vzw_req property\n");
-	}
-#endif
-
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_CHARGING_CONTROLLER
-	chip->lge_cc_lpc = lge_power_get_by_name("lge_cc");
-	if (!chip->lge_cc_lpc) {
-		pr_err("lge_cc_lpc is not yet ready\n");
-		schedule_delayed_work(&chip->lge_cc_enable_work,
-				round_jiffies_relative(
-					msecs_to_jiffies(0)));
-	}
-#endif
-
-#ifdef CONFIG_LGE_PM_WAKE_LOCK_FOR_CHG_LOGO
-	wake_lock_init(&chip->chg_logo_wake_lock,
-			WAKE_LOCK_SUSPEND, "chg_logo-smb");
-#endif
 	chip->previous_soc = -EINVAL;
 	chip->batt_psy.name		= chip->battery_psy_name;
 	chip->batt_psy.type		= POWER_SUPPLY_TYPE_BATTERY;
-#ifdef CONFIG_LGE_PM_BATTERY_VENEER
-{	int smbchg_battery_get_property_ext(struct power_supply *psy,
-		enum power_supply_property prop, union power_supply_propval *val);
-	int smbchg_battery_set_property_ext(struct power_supply *psy,
-		enum power_supply_property prop, const union power_supply_propval *val);
-	int smbchg_battery_is_writeable_ext(struct power_supply *psy,
-		enum power_supply_property prop);
-	enum power_supply_property* smbchg_battery_properties_ext(void);
-	size_t smbchg_battery_num_properties_ext(void);
-
-	chip->batt_psy.get_property	= smbchg_battery_get_property_ext;
-	chip->batt_psy.set_property	= smbchg_battery_set_property_ext;
-	chip->batt_psy.properties	= smbchg_battery_properties_ext();
-	chip->batt_psy.num_properties	= smbchg_battery_num_properties_ext();
-	chip->batt_psy.external_power_changed = smbchg_external_power_changed;
-	chip->batt_psy.property_is_writeable = smbchg_battery_is_writeable_ext;
-}
-#else
 	chip->batt_psy.get_property	= smbchg_battery_get_property;
 	chip->batt_psy.set_property	= smbchg_battery_set_property;
 	chip->batt_psy.properties	= smbchg_battery_properties;
 	chip->batt_psy.num_properties	= ARRAY_SIZE(smbchg_battery_properties);
 	chip->batt_psy.external_power_changed = smbchg_external_power_changed;
 	chip->batt_psy.property_is_writeable = smbchg_battery_is_writeable;
-#endif
-#ifdef CONFIG_LGE_PM_LGE_POWER_CORE
-	chip->batt_psy.external_lge_power_changed =
-						smbchg_external_lge_power_changed;
-#endif
 
 	rc = power_supply_register(chip->dev, &chip->batt_psy);
 	if (rc < 0) {
@@ -11395,6 +10830,11 @@ static int smbchg_probe(struct spmi_device *spmi)
 			"Unable to register batt_psy rc = %d\n", rc);
 		goto out;
 	}
+
+#ifdef CONFIG_HTC_BATT_PCN0004
+	htc_battery_create_attrs(chip->batt_psy.dev);
+#endif //CONFIG_HTC_BATT_PCN0004
+
 	if (chip->dc_psy_type != -EINVAL) {
 		chip->dc_psy.name		= "dc";
 		chip->dc_psy.type		= chip->dc_psy_type;
@@ -11406,7 +10846,6 @@ static int smbchg_probe(struct spmi_device *spmi)
 		chip->dc_psy.supplied_to = smbchg_dc_supplicants;
 		chip->dc_psy.num_supplicants
 			= ARRAY_SIZE(smbchg_dc_supplicants);
-
 		rc = power_supply_register(chip->dev, &chip->dc_psy);
 		if (rc < 0) {
 			dev_err(&spmi->dev,
@@ -11442,42 +10881,19 @@ static int smbchg_probe(struct spmi_device *spmi)
 		goto unregister_led_class;
 	}
 
-#ifdef CONFIG_LGE_PM_FACTORY_TESTMODE
-	rc = device_create_file(&spmi->dev, &dev_attr_at_charge);
-	if (rc < 0) {
-		pr_err("%s:File dev_attr_at_charge creation failed: %d\n",
-				__func__, rc);
-		rc = -ENODEV;
-		goto err_at_charge;
-	}
-
-	rc = device_create_file(&spmi->dev, &dev_attr_at_chcomp);
-	if (rc < 0) {
-		pr_err("%s:File dev_attr_at_chcomp creation failed: %d\n",
-				__func__, rc);
-		rc = -ENODEV;
-		goto err_at_chcomp;
-	}
-#endif
-#ifdef CONFIG_LGE_PM_WEAK_BATT_PACK
-	chip->batt_pack_verify_cnt = 1;
-#endif
-
 	if (!chip->skip_usb_notification) {
 		pr_smb(PR_MISC, "setting usb psy present = %d\n",
 			chip->usb_present);
-#ifdef CONFIG_LGE_USB_TYPE_C
-		if (!chip->typec_psy) {
-			chip->typec_psy = power_supply_get_by_name("usb_pd");
-			if (IS_ERR(chip->typec_psy))
-				chip->typec_psy = 0;
-		}
-		if (!chip->typec_psy)
-			power_supply_set_present(chip->usb_psy, chip->usb_present);
-#else
 		power_supply_set_present(chip->usb_psy, chip->usb_present);
-#endif
 	}
+
+#ifdef CONFIG_HTC_BATT_PCN0006
+	if (get_kernel_flag() & KERNEL_FLAG_ENABLE_BMS_CHARGER_LOG)
+		smbchg_debug_mask = 0xFF;
+	else
+		smbchg_debug_mask = 0x06;
+	pr_debug("smbchg_debug_mask=0x%X\n",smbchg_debug_mask);
+#endif //CONFIG_HTC_BATT_PCN0006
 
 	rerun_hvdcp_det_if_necessary(chip);
 
@@ -11490,26 +10906,16 @@ static int smbchg_probe(struct spmi_device *spmi)
 			chip->revision[ANA_MAJOR], chip->revision[ANA_MINOR],
 			get_prop_batt_present(chip),
 			chip->dc_present, chip->usb_present);
-#ifdef CONFIG_LGE_PM_LGE_POWER_CLASS_SIMPLE
-#ifdef CONFIG_LGE_USB_ANX7688_OVP
-#ifdef CONFIG_LGE_USB_TYPE_C
-	chip->before_usb_supply_type = POWER_SUPPLY_TYPE_UNKNOWN;
-#endif
-#endif
-#endif
-#ifdef CONFIG_LGE_PM_DEBUG
-	schedule_delayed_work(&chip->charging_info_work,
-		round_jiffies_relative(msecs_to_jiffies(CHARGING_INFORM_NORMAL_TIME)));
-#endif
-	pr_smb(PR_LGE, "smbchg_probe end\n");
+
+#ifdef CONFIG_HTC_BATT_PCN0014
+	htc_battery_probe_process(CHARGER_PROBE_DONE);
+	the_chip = chip;
+#endif //CONFIG_HTC_BATT_PCN0014
+#ifdef CONFIG_HTC_BATT_WA_PCN0005
+	pmi8994_boot_update_usb_status();
+#endif //CONFIG_HTC_BATT_WA_PCN0005
 
 	return 0;
-
-#ifdef CONFIG_LGE_PM_FACTORY_TESTMODE
-err_at_chcomp:
-	device_remove_file(&spmi->dev, &dev_attr_at_charge);
-err_at_charge:
-#endif
 
 unregister_led_class:
 	if (chip->cfg_chg_led_support && chip->schg_version == QPNP_SCHG_LITE)
@@ -11519,12 +10925,7 @@ unregister_dc_psy:
 unregister_batt_psy:
 	power_supply_unregister(&chip->batt_psy);
 out:
-#ifdef CONFIG_LGE_PM_WAKE_LOCK_FOR_CHG_LOGO
-	wake_lock_destroy(&chip->chg_logo_wake_lock);
-#endif
 	handle_usb_removal(chip);
-	smbchg_release_function(chip);
-//	kfree(chip);
 	return rc;
 }
 
@@ -11539,18 +10940,6 @@ static int smbchg_remove(struct spmi_device *spmi)
 
 	power_supply_unregister(&chip->batt_psy);
 
-#ifdef CONFIG_LGE_PM_DEBUG
-	cancel_delayed_work(&chip->charging_info_work);
-#endif
-#ifdef CONFIG_LGE_PM_MAXIM_EVP_CONTROL
-	cancel_delayed_work(&chip->enable_evp_chg_work);
-#endif
-#ifdef CONFIG_LGE_PM_WEAK_BATT_PACK
-	cancel_delayed_work(&chip->batt_pack_check_work);
-#endif
-#ifdef CONFIG_LGE_PM_WAKE_LOCK_FOR_CHG_LOGO
-	wake_lock_destroy(&chip->chg_logo_wake_lock);
-#endif
 	return 0;
 }
 
@@ -11562,27 +10951,17 @@ static void smbchg_shutdown(struct spmi_device *spmi)
 	if (!(chip->wa_flags & SMBCHG_RESTART_WA))
 		return;
 
-#ifdef CONFIG_LGE_PM
-	/*
-	 * When HVDCP_3 detected, APSD is disabled by hvdcp_opti.
-	 * enabled APSD here to read correct value after reset.
-	 */
-	if (chip->usb_supply_type == POWER_SUPPLY_TYPE_USB_HVDCP_3) {
-		/* enable APSD */
-		rc = smbchg_sec_masked_write(chip,
-				chip->usb_chgpth_base + APSD_CFG,
-				AUTO_SRC_DETECT_EN_BIT, AUTO_SRC_DETECT_EN_BIT);
-		if (rc < 0)
-			pr_err("Couldn't enable APSD rc=%d\n", rc);
-	}
-#endif
-
 	if (!is_hvdcp_present(chip))
 		return;
 
 	pr_smb(PR_MISC, "Reducing to 500mA\n");
+#ifdef CONFIG_HTC_BATT
+	rc = vote(chip->usb_icl_votable, CHG_SUSPEND_WORKAROUND_ICL_VOTER, true,
+			500);
+#else
 	rc = vote(chip->usb_icl_votable, SHUTDOWN_WORKAROUND_ICL_VOTER, true,
 			500);
+#endif
 	if (rc < 0)
 		pr_err("Couldn't vote 500mA ICL\n");
 
@@ -11594,15 +10973,11 @@ static void smbchg_shutdown(struct spmi_device *spmi)
 
 	pr_smb(PR_MISC, "Disable all interrupts\n");
 	disable_irq(chip->aicl_done_irq);
-#ifndef CONFIG_LGE_PM
 	disable_irq(chip->batt_cold_irq);
 	disable_irq(chip->batt_cool_irq);
 	disable_irq(chip->batt_hot_irq);
-#endif
 	disable_irq(chip->batt_missing_irq);
-#ifndef CONFIG_LGE_PM
 	disable_irq(chip->batt_warm_irq);
-#endif
 	disable_irq(chip->chg_error_irq);
 	disable_irq(chip->chg_hot_irq);
 	disable_irq(chip->chg_term_irq);
@@ -11657,8 +11032,7 @@ static void smbchg_shutdown(struct spmi_device *spmi)
 
 	/* disable HVDCP */
 	pr_smb(PR_MISC, "Disable HVDCP\n");
-	rc = smbchg_sec_masked_write(chip, chip->usb_chgpth_base + CHGPTH_CFG,
-			HVDCP_EN_BIT, 0);
+	rc = vote(chip->hvdcp_enable_votable, HVDCP_PMIC_VOTER, true, 0);
 	if (rc < 0)
 		pr_err("Couldn't disable HVDCP rc=%d\n", rc);
 
@@ -11708,10 +11082,6 @@ static void __exit smbchg_exit(void)
 {
 	return spmi_driver_unregister(&smbchg_driver);
 }
-
-#ifdef CONFIG_LGE_PM_BATTERY_VENEER
-#include "./lge/adapter-qpnp-smbcharger.c"
-#endif
 
 module_init(smbchg_init);
 module_exit(smbchg_exit);
