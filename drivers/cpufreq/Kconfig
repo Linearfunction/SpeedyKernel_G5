@@ -64,9 +64,9 @@ config CPU_FREQ_DEFAULT_GOV_DANCEDANCE
             help
               Use the CPUFreq governor 'dancedance' as default.
 
-config CPU_FREQ_DEFAULT_GOV_INTERACTIVE_PRO
-	bool "interactive_pro"
-	select CPU_FREQ_GOV_INTERACTIVE_PRO
+config CPU_FREQ_DEFAULT_GOV_INTERACTIVE
+	bool "interactive"
+	select CPU_FREQ_GOV_INTERACTIVE
 	help
 	  Use the CPUFreq governor 'interactive_pro' as default.
 	  	  	  	
@@ -164,11 +164,11 @@ config CPU_FREQ_DEFAULT_GOV_CONSERVATIVE
 	  governor. If unsure have a look at the help section of the
 	  driver. Fallback governor will be the performance governor.
 
-config CPU_FREQ_DEFAULT_GOV_INTERACTIVE
-	bool "interactive"
-	select CPU_FREQ_GOV_INTERACTIVE
+config CPU_FREQ_DEFAULT_GOV_OLD_INTERACTIVE
+	bool "old_interactive"
+	select CPU_FREQ_GOV_OLD_INTERACTIVE
 	help
-	  Use the CPUFreq governor 'interactive' as default. This allows
+	  Use the CPUFreq governor 'old_interactive' as default. This allows
 	  you to get a full dynamic cpu frequency capable system by simply
 	  loading your cpufreq low-level hardware driver, using the
 	  'interactive' governor for latency-sensitive workloads.
@@ -224,11 +224,11 @@ config CPU_FREQ_GOV_DANCEDANCE
           dancedance' - a "smart" optimized governor!
           If in doubt, say N.
           
-config CPU_FREQ_GOV_INTERACTIVE_PRO
-	tristate "'interactive_pro' cpufreq governor"
+config CPU_FREQ_GOV_INTERACTIVE
+	tristate "'interactive' cpufreq governor"
 	depends on CPU_FREQ
 	help
-	  A governor as well
+	  A governor as well - Interactive Pro
 
  	  If in doubt, say N.
  	  
@@ -341,10 +341,10 @@ config CPU_FREQ_GOV_BLU_ACTIVE
 config CPU_FREQ_GOV_DARKNESS
  	tristate "'darkness' cpufreq policy governor"
 
-config CPU_FREQ_GOV_INTERACTIVE
-	tristate "'interactive' cpufreq policy governor"
+config CPU_FREQ_GOV_OLD_INTERACTIVE
+	tristate "'old_interactive' cpufreq policy governor"
 	help
-	  'interactive' - This driver adds a dynamic cpufreq policy governor
+	  'old_interactive' - This driver adds a dynamic cpufreq policy governor
 	  designed for latency-sensitive workloads.
 
 	  This governor attempts to reduce the latency of clock
