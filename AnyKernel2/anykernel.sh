@@ -31,7 +31,6 @@ is_slot_device=0;
 chmod -R 755 $ramdisk
 chmod 755 /tmp/anykernel/ramdisk/sbin/busybox
 chmod 640 $ramdisk/fstab.qcom
-chmod 644 /system/etc/mixer_paths_tasha.xml
 
 ## AnyKernel install
 dump_boot;
@@ -45,13 +44,9 @@ insert_line init.rc "init.speedy.rc" after "import /init.usb.rc" "import /init.s
 backup_file fstab.qcom;
 replace_file fstab.qcom 640 fstab.qcom;
 
-# Backup mixer_paths_tasha.xml before replacing it
-backup_file $root/system/etc/mixer_paths_tasha.xml;
-
 # Init.d
 cp -fp $patch/init.d/* $initd
 chmod -R 755 $initd
-
 
 # end ramdisk changes
 
