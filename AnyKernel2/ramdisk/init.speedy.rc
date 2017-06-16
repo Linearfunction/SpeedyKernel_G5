@@ -1,6 +1,6 @@
 import /init.spectrum.rc
 
-on boot
+on property:sys.boot_completed=1
 
 write /sys/block/mmcblk0/queue/scheduler zen
 write /sys/block/dm-0/queue/scheduler zen

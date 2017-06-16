@@ -31,7 +31,7 @@ is_slot_device=0;
 chmod -R 755 $ramdisk
 chmod 755 /tmp/anykernel/ramdisk/sbin/busybox
 chmod 640 $ramdisk/fstab.qcom
-chmod 644 $ramdisk/mixer_paths_tasha.xml
+chmod 644 /system/etc/mixer_paths_tasha.xml
 
 ## AnyKernel install
 dump_boot;
@@ -41,17 +41,12 @@ dump_boot;
 
 insert_line init.rc "init.speedy.rc" after "import /init.usb.rc" "import /init.speedy.rc";
 
-# Stero Sound Mod #
-### --- Call my script --- ###
-backup_file init.rc;
-append_file init.rc "post_boot" init.speedy.patch;
-
-
 # Backup existing fstab file before being replaced for f2fs support
-# backup_file fstab.qcom;
-# backup_file fstab.h1;
-backup_file fstab.h1
-replace_file fstab.h1 750 fstab.h1;
+backup_file fstab.qcom;
+replace_file fstab.qcom 640 fstab.qcom;
+
+# Backup mixer_paths_tasha.xml before replacing it
+backup_file $root/system/etc/mixer_paths_tasha.xml;
 
 # Init.d
 cp -fp $patch/init.d/* $initd
